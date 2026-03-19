@@ -42,7 +42,7 @@ jobs:
 
       - name: Scrape prices and push to Supabase
         run: |
-          pip install httpx beautifulsoup4 > /dev/null 2>&1
+          pip install httpx beautifulsoup4 supabase > /dev/null 2>&1
 
           python3 << 'PYTHON_SCRIPT'
           import httpx, json, os
@@ -134,24 +134,16 @@ jobs:
               except Exception as e:
                   print(f"  {crop_en}: ERROR {e}")
 
-          # Push to Supabase using urllib (avoids GitHub secret masking issue with httpx)
+          # Push to Supabase using supabase-py (handles auth internally, avoids secret masking)
           if all_rows:
               print(f"\nPushing {len(all_rows)} price rows to Supabase...")
-              import urllib.request
-              req = urllib.request.Request(
-                  f"{SUPABASE_URL}/rest/v1/mandi_prices",
-                  data=json.dumps(all_rows).encode("utf-8"),
-                  method="POST",
-              )
-              req.add_header("apikey", SUPABASE_KEY)
-              req.add_header("Authorization", f"Bearer {SUPABASE_KEY}")
-              req.add_header("Content-Type", "application/json")
-              req.add_header("Prefer", "resolution=merge-duplicates")
-              try:
-                  resp = urllib.request.urlopen(req, timeout=30)
-                  print(f"Supabase response: {resp.status}")
-              except urllib.error.HTTPError as e:
-                  print(f"Supabase error: {e.code} {e.read().decode()[:500]}")
+              from supabase import create_client
+              sb = create_client(SUPABASE_URL, SUPABASE_KEY)
+              for i in range(0, len(all_rows), 50):
+                  batch = all_rows[i:i+50]
+                  sb.table("mandi_prices").upsert(batch, on_conflict="crop,apmc,date").execute()
+                  print(f"  Batch {i//50 + 1}: {len(batch)} rows pushed")
+              print(f"Done — {len(all_rows)} total rows in Supabase")
           else:
               print("No prices scraped — nothing to push")
 
