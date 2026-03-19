@@ -93,9 +93,15 @@ def save_digest(digest: dict) -> bool:
             "generated_at": digest["generated_at"],
         }
 
-        # upsert: insert if new, update if date already exists
-        # on_conflict="date" means: if a row with this date exists, update it
-        client.table("digests").upsert(row, on_conflict="date").execute()
+        # Try with article_links first (if column exists in Supabase)
+        try:
+            row["article_links"] = digest.get("article_links", [])
+            client.table("digests").upsert(row, on_conflict="date").execute()
+        except Exception:
+            # Column might not exist — save without it
+            del row["article_links"]
+            client.table("digests").upsert(row, on_conflict="date").execute()
+
         logger.info(f"Digest saved to Supabase for {digest['date']}")
         return True
 

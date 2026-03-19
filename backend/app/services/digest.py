@@ -401,13 +401,21 @@ async def get_latest_digest() -> dict | None:
     """
     # Try Supabase first (primary storage)
     digest = db.get_latest_digest_from_db()
-    if digest:
-        return digest
 
-    # Fallback: check local JSON file for today
+    # If Supabase digest has no article_links, try local file to get them
     today = datetime.now(IST).strftime("%Y-%m-%d")
     filepath = DIGEST_DIR / f"digest_{today}.json"
 
+    if digest:
+        if not digest.get("article_links") and filepath.exists():
+            try:
+                local = json.loads(filepath.read_text(encoding="utf-8"))
+                digest["article_links"] = local.get("article_links", [])
+            except Exception:
+                pass
+        return digest
+
+    # Fallback: local JSON file
     if filepath.exists():
         try:
             logger.info("Supabase unavailable — serving from local file")

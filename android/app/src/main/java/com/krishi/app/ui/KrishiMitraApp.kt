@@ -81,7 +81,8 @@ fun KrishiMitraApp() {
                 // Sync to Supabase in background (best-effort)
                 try {
                     val deviceId = app.prefsStore.ensureDeviceId()
-                    ApiClient.service.createProfile(
+                    android.util.Log.d("ProfileSync", "Syncing profile: deviceId=$deviceId district=${profile.district} crops=${profile.crops}")
+                    val response = ApiClient.service.createProfile(
                         ProfileRequest(
                             device_id = deviceId,
                             district = profile.district,
@@ -91,7 +92,10 @@ fun KrishiMitraApp() {
                             language = profile.language,
                         )
                     )
-                } catch (_: Exception) { /* offline — will sync later */ }
+                    android.util.Log.d("ProfileSync", "Profile synced: $response")
+                } catch (e: Exception) {
+                    android.util.Log.e("ProfileSync", "Profile sync failed: ${e.message}", e)
+                }
             }
         }
         return
