@@ -103,7 +103,7 @@ class HomeViewModel(
                 }
                 // Fetch personalized data when profile is available
                 if (crops.isNotEmpty()) {
-                    fetchCardData(crops)
+                    fetchCardData(crops, district)
                 }
             }
         }
@@ -111,7 +111,7 @@ class HomeViewModel(
         refresh()
     }
 
-    private fun fetchCardData(crops: List<String>) {
+    private fun fetchCardData(crops: List<String>, farmerDistrict: String = "") {
         viewModelScope.launch {
             val lang = language.value
             val cards = _uiState.value.cards.copy()
@@ -155,7 +155,7 @@ class HomeViewModel(
 
             // Weather
             try {
-                val district = mapDistrictToApi(_uiState.value.farmerDistrict)
+                val district = mapDistrictToApi(farmerDistrict)
                 val weatherResp = ApiClient.service.getWeather(district)
                 updatedCards = updatedCards.copy(
                     weatherTemp = "${weatherResp.temp}°C",
@@ -220,11 +220,9 @@ class HomeViewModel(
         } catch (_: Exception) { emptyList() }
 
         cachedLinks = links
-        val items = parseDigestText(text).map { item ->
-            val linkIndex = item.hashCode().mod(links.size.coerceAtLeast(1))
-            if (links.isNotEmpty()) {
-                val link = links[linkIndex.coerceIn(0, links.size - 1)]
-                item.copy(sourceUrl = link.link, sourceName = link.source)
+        val items = parseDigestText(text).mapIndexed { index, item ->
+            if (index < links.size) {
+                item.copy(sourceUrl = links[index].link, sourceName = links[index].source)
             } else item
         }
 
@@ -256,7 +254,8 @@ class HomeViewModel(
             }
             // Also refresh card data
             val crops = prefsStore.crops.first()
-            if (crops.isNotEmpty()) fetchCardData(crops)
+            val district = prefsStore.district.first()
+            if (crops.isNotEmpty()) fetchCardData(crops, district)
         }
     }
 

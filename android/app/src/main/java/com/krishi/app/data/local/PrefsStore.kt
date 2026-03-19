@@ -17,6 +17,7 @@ class PrefsStore(private val context: Context) {
         val KEY_DEVICE_ID = stringPreferencesKey("device_id")
         val KEY_LANGUAGE = stringPreferencesKey("language")
         val KEY_ONBOARDED = booleanPreferencesKey("onboarded")
+        val KEY_TUTORIAL_DONE = booleanPreferencesKey("tutorial_done")
         val KEY_DISTRICT = stringPreferencesKey("district")
         val KEY_TALUK = stringPreferencesKey("taluk")
         val KEY_CROPS = stringPreferencesKey("crops") // comma-separated
@@ -26,6 +27,14 @@ class PrefsStore(private val context: Context) {
     // Onboarding — false until farmer completes setup
     val isOnboarded: Flow<Boolean> = context.dataStore.data.map { prefs ->
         prefs[KEY_ONBOARDED] ?: false
+    }
+
+    val isTutorialDone: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_TUTORIAL_DONE] ?: false
+    }
+
+    suspend fun completeTutorial() {
+        context.dataStore.edit { it[KEY_TUTORIAL_DONE] = true }
     }
 
     // Language

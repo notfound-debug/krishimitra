@@ -10,9 +10,14 @@ It returns a small JSON (~5KB) with Kannada + English summaries.
 The app caches this locally, so it only fetches once per day.
 """
 
+import logging
+
 from fastapi import APIRouter, HTTPException
 
 from app.services.digest import generate_daily_digest, get_latest_digest
+from app.services.prices import scrape_and_save_all_crops
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/digest", tags=["digest"])
 
@@ -59,9 +64,19 @@ async def trigger_generate_digest():
     Takes ~10-20 seconds depending on LLM response time.
     """
     digest = await generate_daily_digest()
+
+    # Also scrape and save prices for all crops (runs with every cron)
+    try:
+        price_results = await scrape_and_save_all_crops()
+        logger.info(f"Price scrape completed: {price_results}")
+    except Exception as e:
+        logger.error(f"Price scrape failed: {e}")
+        price_results = {}
+
     return {
         "status": "success",
         "date": digest["date"],
         "article_count": digest["article_count"],
         "sources": digest["sources"],
+        "prices_scraped": price_results,
     }

@@ -89,6 +89,10 @@ APMC_NAME_KN: dict[str, str] = {
     "Udupi": "ಉಡುಪಿ",
     "Kundapura": "ಕುಂದಾಪುರ",
     "Karkala": "ಕಾರ್ಕಳ",
+    "Sirsi": "ಸಿರ್ಸಿ",
+    "Kumta": "ಕುಮಟಾ",
+    "Siddapur": "ಸಿದ್ದಾಪುರ",
+    "Honnavar": "ಹೊನ್ನಾವರ",
 }
 
 
@@ -110,6 +114,7 @@ COMMODITY_ONLINE_SLUGS: dict[str, str] = {
 
 COMMODITY_ONLINE_MARKETS: list[str] = [
     "puttur", "mangalore", "sullia", "bantwal", "udupi",
+    "sirsi", "kumta", "siddapur", "honnavar",
 ]
 
 
@@ -570,6 +575,49 @@ def _generate_fallback_response(crop_key: str) -> dict[str, Any] | None:
 
 
 # ---------------------------------------------------------------------------
+# Cron: scrape all crops and save to DB
+# ---------------------------------------------------------------------------
+
+ALL_CROPS_TO_SCRAPE = ["arecanut", "coconut", "copra", "rice", "black pepper", "cashew", "banana"]
+
+async def scrape_and_save_all_crops() -> dict:
+    """
+    Scrape prices for all crops and save to Supabase.
+    Called by the cron job (5x/day) after digest generation.
+    """
+    from app.services import database as db
+    results = {}
+
+    for crop_key in ALL_CROPS_TO_SCRAPE:
+        display_name = CROP_DISPLAY_NAME.get(crop_key, crop_key.title())
+        crop_kn = CROP_NAME_KN.get(crop_key, display_name)
+
+        try:
+            # Try commodityonline first
+            scraped = await _try_commodityonline(crop_key)
+            if scraped and scraped.get("prices"):
+                db.save_mandi_prices(display_name, crop_kn, scraped["prices"], "commodityonline")
+                results[crop_key] = f"OK ({len(scraped['prices'])} markets)"
+                continue
+
+            # Try data.gov.in
+            live = await _fetch_from_data_gov(crop_key)
+            if live and live.get("prices"):
+                db.save_mandi_prices(display_name, crop_kn, live["prices"], "data.gov.in")
+                results[crop_key] = f"OK ({len(live['prices'])} markets via data.gov)"
+                continue
+
+            results[crop_key] = "SKIP (no data)"
+
+        except Exception as e:
+            results[crop_key] = f"FAIL ({e})"
+            logger.error(f"Price scrape failed for {crop_key}: {e}")
+
+    logger.info(f"Price scrape results: {results}")
+    return results
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -599,43 +647,93 @@ async def fetch_prices(crop: str) -> dict[str, Any]:
             f"Crop '{crop}' not found. Available: {', '.join(available)}"
         )
 
-    # --- Strategy 1: data.gov.in live API ---
-    try:
-        live = await _fetch_from_data_gov(crop_key)
-        if live is not None:
-            live["price_source"] = "data.gov.in"
-            logger.info(
-                "Returning live prices for '%s' (%d APMCs)",
-                crop_key, len(live["prices"]),
-            )
-            return live
-    except Exception:
-        logger.exception("Unexpected failure in data.gov.in fetch for '%s'", crop_key)
+    display_name = CROP_DISPLAY_NAME.get(crop_key, crop_key.title())
+    crop_kn = CROP_NAME_KN.get(crop_key, display_name)
 
-    # --- Strategy 2: commodityonline.com scraper ---
+    # --- Strategy 1: Supabase DB (fastest, most reliable) ---
+    from app.services import database as db
+    db_rows = db.get_latest_prices(display_name)
+    if db_rows:
+        # Group by date — use the most recent date's data
+        latest_date = db_rows[0]["date"]
+        today_rows = [r for r in db_rows if r["date"] == latest_date]
+        if today_rows:
+            prices = []
+            for r in today_rows:
+                prices.append({
+                    "apmc": r["apmc"],
+                    "min_price": r["min_price"],
+                    "max_price": r["max_price"],
+                    "modal_price": r["modal_price"],
+                    "trend": "",
+                    "trend_direction": "stable",
+                })
+            # Sort by max_price descending
+            prices.sort(key=lambda x: x["max_price"], reverse=True)
+            best_apmc = prices[0]["apmc"] if prices else ""
+            result = {
+                "crop": display_name,
+                "crop_kn": crop_kn,
+                "date": str(latest_date),
+                "best_apmc": best_apmc,
+                "prices": prices,
+                "recommendation_kn": f"{APMC_NAME_KN.get(best_apmc, best_apmc)} ಮಂಡಿಯಲ್ಲಿ ಅತ್ಯುತ್ತಮ ಬೆಲೆ.",
+                "recommendation_en": f"Best price at {best_apmc} mandi.",
+                "price_source": "database",
+            }
+            logger.info(f"Returning DB prices for '{crop_key}': {len(prices)} APMCs, date={latest_date}")
+            return result
+
+    # --- Strategy 2: Scrape commodityonline + save to DB ---
     try:
         scraped = await _try_commodityonline(crop_key)
         if scraped is not None:
             scraped["price_source"] = "commodityonline"
-            logger.info(
-                "Returning scraped prices for '%s' (%d markets)",
-                crop_key, len(scraped["prices"]),
-            )
+            # Save to DB for future requests
+            db.save_mandi_prices(display_name, crop_kn, scraped["prices"], source="commodityonline")
+            logger.info(f"Scraped and saved prices for '{crop_key}': {len(scraped['prices'])} markets")
             return scraped
     except Exception:
-        logger.exception(
-            "Unexpected failure in commodityonline scrape for '%s'", crop_key
-        )
+        logger.exception("commodityonline scrape failed for '%s'", crop_key)
 
-    # --- Strategy 3: Date-seeded realistic fallback ---
-    logger.info("Using date-seeded fallback prices for '%s'", crop_key)
-    fallback = _generate_fallback_response(crop_key)
-    if fallback is not None:
-        fallback["price_source"] = "estimated"
-        return fallback
+    # --- Strategy 3: data.gov.in API ---
+    try:
+        live = await _fetch_from_data_gov(crop_key)
+        if live is not None:
+            live["price_source"] = "data.gov.in"
+            db.save_mandi_prices(display_name, crop_kn, live["prices"], source="data.gov.in")
+            return live
+    except Exception:
+        logger.exception("data.gov.in failed for '%s'", crop_key)
 
-    # Should never reach here if CROP_DISPLAY_NAME and CROP_PRICE_CONFIG
-    # are kept in sync, but handle it gracefully just in case.
+    # --- Strategy 4: Return most recent DB data (any date) ---
+    if db_rows:
+        # We have old data — return it with the actual date
+        latest_date = db_rows[0]["date"]
+        prices = [{"apmc": r["apmc"], "min_price": r["min_price"], "max_price": r["max_price"],
+                    "modal_price": r["modal_price"], "trend": "", "trend_direction": "stable"}
+                   for r in db_rows if r["date"] == latest_date]
+        prices.sort(key=lambda x: x["max_price"], reverse=True)
+        return {
+            "crop": display_name, "crop_kn": crop_kn, "date": str(latest_date),
+            "best_apmc": prices[0]["apmc"] if prices else "",
+            "prices": prices,
+            "recommendation_kn": "ಹಳೆಯ ಬೆಲೆ — ಇಂದಿನ ಬೆಲೆ ಶೀಘ್ರದಲ್ಲಿ ಲಭ್ಯ.",
+            "recommendation_en": "Older prices — today's prices available soon.",
+            "price_source": "database_old",
+        }
+
+    # --- No data at all ---
+    logger.error(f"No price data available for '{crop_key}'")
+    return {
+        "crop": display_name, "crop_kn": crop_kn,
+        "date": str(date.today()), "best_apmc": "", "prices": [],
+        "recommendation_kn": "ಬೆಲೆ ಲಭ್ಯವಿಲ್ಲ — ಶೀಘ್ರದಲ್ಲಿ ಪ್ರಯತ್ನಿಸಿ.",
+        "recommendation_en": "Prices unavailable — try again soon.",
+        "price_source": "none",
+    }
+
+    # Should never reach here
     logger.error("No price data available at all for '%s'", crop_key)
     display_name = CROP_DISPLAY_NAME.get(crop_key, crop_key.title())
     crop_kn = CROP_NAME_KN.get(crop_key, display_name)

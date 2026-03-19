@@ -37,6 +37,7 @@ import com.krishi.app.data.remote.ProfileRequest
 import com.krishi.app.ui.screens.ChatScreen
 import com.krishi.app.ui.screens.HomeScreen
 import com.krishi.app.ui.screens.OnboardingScreen
+import com.krishi.app.ui.screens.TutorialOverlay
 import com.krishi.app.ui.screens.PricesScreen
 import com.krishi.app.ui.screens.SchemesScreen
 import com.krishi.app.ui.theme.KrishiColors
@@ -101,10 +102,18 @@ fun KrishiMitraApp() {
         return
     }
 
+    // Check tutorial state
+    val mainScope = rememberCoroutineScope()
+    val isTutorialDone by app.prefsStore.isTutorialDone.collectAsState(initial = true)
+    val tutorialLang by app.prefsStore.language.collectAsState(initial = "kn")
+
     // Create ViewModels
     val homeViewModel = remember { HomeViewModel(app.digestRepository, app.prefsStore) }
     val chatViewModel = remember { ChatViewModel(app.chatRepository, app.prefsStore) }
     val lang by homeViewModel.language.collectAsState()
+
+    // Tutorial overlay shown on top of the app
+    Box(modifier = Modifier.fillMaxSize()) {
 
     Scaffold(
         bottomBar = {
@@ -197,6 +206,15 @@ fun KrishiMitraApp() {
             }
         }
     }
+
+    // Tutorial overlay — shown once after onboarding
+    if (!isTutorialDone) {
+        TutorialOverlay(language = tutorialLang) {
+            mainScope.launch { app.prefsStore.completeTutorial() }
+        }
+    }
+
+    } // Close Box
 }
 
 @Composable

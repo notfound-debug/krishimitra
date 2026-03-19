@@ -303,3 +303,72 @@ def get_profile(device_id: str) -> dict | None:
     except Exception as e:
         logger.error(f"Failed to fetch profile: {e}")
         return None
+
+
+# ---------------------------------------------------------------------------
+# Mandi Prices
+# ---------------------------------------------------------------------------
+
+def save_mandi_prices(crop: str, crop_kn: str, prices: list[dict], source: str = "commodityonline") -> bool:
+    """
+    Save scraped mandi prices to Supabase.
+    Uses upsert on (crop, apmc, date) — safe to call multiple times per day.
+    """
+    client = get_client()
+    if client is None:
+        return False
+
+    from datetime import date as date_type
+    today = str(date_type.today())
+
+    try:
+        rows = []
+        for p in prices:
+            rows.append({
+                "crop": crop,
+                "crop_kn": crop_kn,
+                "apmc": p.get("apmc", ""),
+                "min_price": p.get("min_price", 0),
+                "max_price": p.get("max_price", 0),
+                "modal_price": p.get("modal_price", 0),
+                "date": today,
+                "source": source,
+            })
+
+        if rows:
+            client.table("mandi_prices").upsert(
+                rows, on_conflict="crop,apmc,date"
+            ).execute()
+            logger.info(f"Saved {len(rows)} price rows for {crop} ({today})")
+
+        return True
+    except Exception as e:
+        logger.error(f"Failed to save prices for {crop}: {e}")
+        return False
+
+
+def get_latest_prices(crop: str) -> list[dict] | None:
+    """
+    Get the most recent prices for a crop from Supabase.
+    Tries today first, falls back to most recent date.
+    Returns None if no data exists.
+    """
+    client = get_client()
+    if client is None:
+        return None
+
+    try:
+        result = client.table("mandi_prices") \
+            .select("*") \
+            .eq("crop", crop) \
+            .order("date", desc=True) \
+            .limit(20) \
+            .execute()
+
+        if result.data:
+            return result.data
+
+        return None
+    except Exception as e:
+        logger.error(f"Failed to fetch prices for {crop}: {e}")
+        return None
