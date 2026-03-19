@@ -106,6 +106,7 @@ jobs:
                           continue
                       district = cells[0].text.strip()
                       market = cells[1].text.strip()
+                      variety = cells[3].text.strip() if len(cells) > 3 else ""
                       try:
                           def pp(txt):
                               return int(float(txt.replace("₹","").replace(",","").replace(" ","").strip()))
@@ -121,6 +122,7 @@ jobs:
                           "crop": crop_en,
                           "crop_kn": crop_kn,
                           "apmc": market,
+                          "variety": variety,
                           "min_price": min_p,
                           "max_price": max_p,
                           "modal_price": modal_p,
@@ -134,25 +136,16 @@ jobs:
               except Exception as e:
                   print(f"  {crop_en}: ERROR {e}")
 
-          # Deduplicate: keep highest max_price per crop+apmc+date
-          deduped = {}
-          for row in all_rows:
-              key = (row["crop"], row["apmc"], row["date"])
-              if key not in deduped or row["max_price"] > deduped[key]["max_price"]:
-                  deduped[key] = row
-          unique_rows = list(deduped.values())
-          print(f"Deduplicated: {len(all_rows)} -> {len(unique_rows)} unique rows")
-
-          # Push to Supabase
-          if unique_rows:
-              print(f"Pushing {len(unique_rows)} price rows to Supabase...")
+          # Push to Supabase (variety included — Rashi and Bette are separate rows)
+          if all_rows:
+              print(f"\nPushing {len(all_rows)} price rows to Supabase...")
               from supabase import create_client
               sb = create_client(SUPABASE_URL, SUPABASE_KEY)
-              for i in range(0, len(unique_rows), 50):
-                  batch = unique_rows[i:i+50]
-                  sb.table("mandi_prices").upsert(batch, on_conflict="crop,apmc,date").execute()
+              for i in range(0, len(all_rows), 50):
+                  batch = all_rows[i:i+50]
+                  sb.table("mandi_prices").upsert(batch, on_conflict="crop,apmc,variety,date").execute()
                   print(f"  Batch {i//50 + 1}: {len(batch)} rows pushed")
-              print(f"Done — {len(unique_rows)} rows in Supabase")
+              print(f"Done — {len(all_rows)} rows in Supabase")
           else:
               print("No prices scraped — nothing to push")
 
