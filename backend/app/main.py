@@ -32,6 +32,8 @@ from app.routers import digest as digest_router
 from app.routers import prices as prices_router
 from app.routers import profile as profile_router
 from app.routers import schemes as schemes_router
+from app.routers import weather as weather_router
+from app.routers import insight as insight_router
 
 # Set up logging so we can see what's happening
 logging.basicConfig(
@@ -71,6 +73,8 @@ app.include_router(digest_router.router)
 app.include_router(prices_router.router)
 app.include_router(profile_router.router)
 app.include_router(schemes_router.router)
+app.include_router(weather_router.router)
+app.include_router(insight_router.router)
 
 
 # --- Health Check ---

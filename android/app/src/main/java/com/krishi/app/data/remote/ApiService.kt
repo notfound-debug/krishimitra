@@ -125,6 +125,27 @@ data class AskResponse(
     val language: String = "kn",
 )
 
+// --- Weather ---
+
+data class WeatherResponse(
+    val temp: Int = 0,
+    val feels_like: Int = 0,
+    val description_en: String = "",
+    val description_kn: String = "",
+    val humidity: Int = 0,
+    val rain_forecast: Boolean = false,
+)
+
+// --- Smart Insight ---
+
+data class InsightResponse(
+    val crop: String = "",
+    val crop_kn: String = "",
+    val insight_kn: String = "",
+    val insight_en: String = "",
+    val trend_direction: String = "",
+)
+
 data class HealthResponse(
     val app: String,
     val status: String,
@@ -163,6 +184,12 @@ interface ApiService {
         @Query("land_acres") landAcres: Double? = null,
         @Query("category") category: String? = null,
     ): SchemesListResponse
+
+    @GET("api/weather")
+    suspend fun getWeather(@Query("district") district: String): WeatherResponse
+
+    @GET("api/insight")
+    suspend fun getInsight(@Query("crop") crop: String, @Query("language") language: String): InsightResponse
 
     @GET("/")
     suspend fun healthCheck(): HealthResponse

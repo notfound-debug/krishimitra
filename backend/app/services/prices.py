@@ -40,6 +40,8 @@ logger = logging.getLogger(__name__)
 CROP_NAME_KN: dict[str, str] = {
     "arecanut": "ಅಡಿಕೆ",
     "coconut": "ತೆಂಗಿನಕಾಯಿ",
+    "copra": "ಕೊಬ್ಬರಿ",
+    "banana": "ಬಾಳೆ",
     "rice": "ಭತ್ತ",
     "paddy": "ಭತ್ತ",
     "black pepper": "ಕಾಳುಮೆಣಸು",
@@ -52,6 +54,8 @@ CROP_NAME_KN: dict[str, str] = {
 CROP_DISPLAY_NAME: dict[str, str] = {
     "arecanut": "Arecanut",
     "coconut": "Coconut",
+    "copra": "Copra",
+    "banana": "Banana",
     "rice": "Rice",
     "paddy": "Rice",
     "black pepper": "Black Pepper",
@@ -65,6 +69,8 @@ CROP_DISPLAY_NAME: dict[str, str] = {
 CROP_TO_COMMODITY: dict[str, str] = {
     "arecanut": "Arecanut(Betelnut/Supari)",
     "coconut": "Coconut",
+    "copra": "Copra",
+    "banana": "Banana",
     "rice": "Paddy(Dhan)(Common)",
     "paddy": "Paddy(Dhan)(Common)",
     "black pepper": "Black Pepper",
@@ -93,6 +99,8 @@ APMC_NAME_KN: dict[str, str] = {
 COMMODITY_ONLINE_SLUGS: dict[str, str] = {
     "arecanut": "arecanut-betelnutsupari",
     "coconut": "coconut",
+    "copra": "copra",
+    "banana": "banana",
     "rice": "paddy-dhan-common",
     "paddy": "paddy-dhan-common",
     "black pepper": "black-pepper",
@@ -154,6 +162,20 @@ CROP_PRICE_CONFIG: dict[str, dict[str, Any]] = {
         "variance_pct": 0.07,
         "daily_swing": 800,
         "apmcs": ["Mangalore", "Puttur", "Bantwal", "Kundapura"],
+    },
+    "copra": {
+        "base_modal": 10500,
+        "spread": (500, 500),
+        "variance_pct": 0.06,
+        "daily_swing": 400,
+        "apmcs": ["Mangalore", "Puttur", "Bantwal", "Udupi", "Kundapura"],
+    },
+    "banana": {
+        "base_modal": 2500,
+        "spread": (200, 200),
+        "variance_pct": 0.08,
+        "daily_swing": 150,
+        "apmcs": ["Mangalore", "Puttur", "Bantwal", "Udupi", "Kundapura"],
     },
 }
 

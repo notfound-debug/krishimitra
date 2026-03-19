@@ -1,33 +1,22 @@
-/*
- * HomeViewModel.kt — Holds the Home screen's state.
- *
- * What it does:
- * 1. On creation: starts observing the digest from Room DB (instant cache)
- * 2. On creation: triggers a background API refresh
- * 3. On pull-to-refresh: triggers another API refresh
- * 4. Parses the raw Kannada digest text into categorized items
- *
- * The ViewModel survives screen rotation — the farmer doesn't lose
- * their scroll position or see a re-fetch.
- */
-
 package com.krishi.app.ui.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.krishi.app.data.local.DigestEntity
 import com.krishi.app.data.local.PrefsStore
+import com.krishi.app.data.remote.ApiClient
 import com.krishi.app.data.repository.DigestRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 data class DigestItem(
-    val category: String,   // "price", "crop", "scheme", "weather", "general"
-    val badge: String,       // "💰 ಬೆಲೆ", "🌿 ಬೆಳೆ", etc.
-    val text: String,        // Main news text in Kannada
-    val action: String,      // "→ ..." action line
-    val sourceUrl: String = "",  // Link to original article
-    val sourceName: String = "", // e.g. "Krishi Jagran"
+    val category: String,
+    val badge: String,
+    val text: String,
+    val action: String,
+    val sourceUrl: String = "",
+    val sourceName: String = "",
 )
 
 data class SourceLink(
@@ -36,12 +25,36 @@ data class SourceLink(
     val source: String,
 )
 
+// Data for the 3 stat cards + hero price
+data class HomeCardData(
+    // Hero card (primary crop)
+    val primaryCropName: String = "ಅಡಿಕೆ",
+    val primaryCropPrice: String = "—",
+    val primaryCropApmc: String = "",
+    val primaryCropTrend: String = "",
+    val primaryCropTrendDir: String = "",
+    val priceDate: String = "",
+    val isRealPrice: Boolean = false,
+    // Stat card 1: secondary crop
+    val secondaryCropName: String = "",
+    val secondaryCropPrice: String = "—",
+    // Stat card 2: weather
+    val weatherTemp: String = "—",
+    val weatherDesc: String = "",
+    // Stat card 3: smart insight
+    val insightText: String = "",
+    val insightCrop: String = "",
+)
+
 data class HomeUiState(
     val isLoading: Boolean = true,
     val digestItems: List<DigestItem> = emptyList(),
     val sourceLinks: List<SourceLink> = emptyList(),
     val lastUpdated: String = "",
     val error: String? = null,
+    val cards: HomeCardData = HomeCardData(),
+    val farmerTaluk: String = "",
+    val farmerDistrict: String = "",
 )
 
 class HomeViewModel(
@@ -52,16 +65,14 @@ class HomeViewModel(
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
-    // Language state — observed by the entire app
     val language: StateFlow<String> = prefsStore.language
         .stateIn(viewModelScope, SharingStarted.Eagerly, "kn")
 
-    // Keep the latest digest entity so we can re-parse on language toggle
     private var latestEntity: DigestEntity? = null
     private var cachedLinks: List<SourceLink> = emptyList()
 
     init {
-        // Observe cached digest from Room DB
+        // Observe digest from Room DB
         viewModelScope.launch {
             repository.latestDigest.collect { entity ->
                 if (entity != null) {
@@ -78,21 +89,131 @@ class HomeViewModel(
             }
         }
 
+        // Observe profile data
+        viewModelScope.launch {
+            combine(
+                prefsStore.district,
+                prefsStore.taluk,
+                prefsStore.crops,
+            ) { district, taluk, crops ->
+                Triple(district, taluk, crops)
+            }.collect { (district, taluk, crops) ->
+                _uiState.update {
+                    it.copy(farmerDistrict = district, farmerTaluk = taluk)
+                }
+                // Fetch personalized data when profile is available
+                if (crops.isNotEmpty()) {
+                    fetchCardData(crops)
+                }
+            }
+        }
+
         refresh()
     }
+
+    private fun fetchCardData(crops: List<String>) {
+        viewModelScope.launch {
+            val lang = language.value
+            val cards = _uiState.value.cards.copy()
+            var updatedCards = cards
+
+            try {
+                // Primary crop price
+                val primaryCropRaw = (crops.firstOrNull() ?: "ಅಡಿಕೆ")
+                    .replace(Regex("[🌴🥥🌾🥜🍫🌳🌶️🍌] ?"), "").trim()
+
+                // Map Kannada crop name to API crop name
+                val cropApiName = mapCropToApi(primaryCropRaw)
+                val priceResponse = ApiClient.service.getPrices(cropApiName)
+                val bestPrice = priceResponse.prices.firstOrNull()
+
+                updatedCards = updatedCards.copy(
+                    primaryCropName = if (lang == "kn") priceResponse.crop_kn else priceResponse.crop,
+                    primaryCropPrice = "₹${formatPrice(bestPrice?.max_price ?: 0)}",
+                    primaryCropApmc = priceResponse.best_apmc,
+                    primaryCropTrend = bestPrice?.trend ?: "",
+                    primaryCropTrendDir = bestPrice?.trend_direction ?: "",
+                    priceDate = priceResponse.date,
+                    isRealPrice = true,
+                )
+
+                // Secondary crop price
+                if (crops.size >= 2) {
+                    val secondaryCropRaw = crops[1]
+                        .replace(Regex("[🌴🥥🌾🥜🍫🌳🌶️🍌] ?"), "").trim()
+                    val secApiName = mapCropToApi(secondaryCropRaw)
+                    val secResponse = ApiClient.service.getPrices(secApiName)
+                    val secBest = secResponse.prices.firstOrNull()
+                    updatedCards = updatedCards.copy(
+                        secondaryCropName = if (lang == "kn") secResponse.crop_kn else secResponse.crop,
+                        secondaryCropPrice = "₹${formatPriceShort(secBest?.max_price ?: 0)}",
+                    )
+                }
+            } catch (e: Exception) {
+                Log.w("HomeVM", "Price fetch failed: ${e.message}")
+            }
+
+            // Weather
+            try {
+                val district = _uiState.value.farmerDistrict.ifEmpty { "Dakshina Kannada" }
+                val weatherResp = ApiClient.service.getWeather(district)
+                updatedCards = updatedCards.copy(
+                    weatherTemp = "${weatherResp.temp}°C",
+                    weatherDesc = if (lang == "kn") weatherResp.description_kn else weatherResp.description_en,
+                )
+            } catch (e: Exception) {
+                Log.w("HomeVM", "Weather fetch failed: ${e.message}")
+                updatedCards = updatedCards.copy(weatherTemp = "—", weatherDesc = "")
+            }
+
+            // Smart insight
+            try {
+                val primaryCropRaw = (crops.firstOrNull() ?: "ಅಡಿಕೆ")
+                    .replace(Regex("[🌴🥥🌾🥜🍫🌳🌶️🍌] ?"), "").trim()
+                val cropApiName = mapCropToApi(primaryCropRaw)
+                val insightResp = ApiClient.service.getInsight(cropApiName, lang)
+                updatedCards = updatedCards.copy(
+                    insightText = if (lang == "kn") insightResp.insight_kn else insightResp.insight_en,
+                    insightCrop = if (lang == "kn") insightResp.crop_kn else insightResp.crop,
+                )
+            } catch (e: Exception) {
+                Log.w("HomeVM", "Insight fetch failed: ${e.message}")
+            }
+
+            _uiState.update { it.copy(cards = updatedCards) }
+        }
+    }
+
+    private fun mapCropToApi(kannadaName: String): String {
+        return when {
+            "ಅಡಿಕೆ" in kannadaName || "arecanut" in kannadaName.lowercase() -> "Arecanut"
+            "ತೆಂಗು" in kannadaName || "coconut" in kannadaName.lowercase() -> "Coconut"
+            "ಭತ್ತ" in kannadaName || "rice" in kannadaName.lowercase() -> "Rice"
+            "ಕಾಳುಮೆಣಸು" in kannadaName || "pepper" in kannadaName.lowercase() -> "Black Pepper"
+            "ಗೋಡಂಬಿ" in kannadaName || "cashew" in kannadaName.lowercase() -> "Cashew"
+            "ಕೊಬ್ಬರಿ" in kannadaName || "copra" in kannadaName.lowercase() -> "Copra"
+            "ಬಾಳೆ" in kannadaName || "banana" in kannadaName.lowercase() -> "Banana"
+            "ಕೋಕೋ" in kannadaName || "cocoa" in kannadaName.lowercase() -> "Cocoa"
+            "ರಬ್ಬರ್" in kannadaName || "rubber" in kannadaName.lowercase() -> "Rubber"
+            "ಮೆಣಸಿನಕಾಯಿ" in kannadaName || "chilli" in kannadaName.lowercase() -> "Chilli"
+            else -> kannadaName
+        }
+    }
+
+    private fun formatPrice(price: Int): String = String.format("%,d", price)
+    private fun formatPriceShort(price: Int): String =
+        if (price >= 1000) "${String.format("%.1f", price / 1000.0)}K" else price.toString()
 
     private fun updateDigestForLanguage(entity: DigestEntity, lang: String) {
         val text = if (lang == "en" && entity.english.isNotBlank()) entity.english else entity.kannada
         val links = try {
             com.google.gson.Gson().fromJson(
-                entity.articleLinksJson,
-                Array<SourceLink>::class.java
+                entity.articleLinksJson, Array<SourceLink>::class.java
             ).toList()
         } catch (_: Exception) { emptyList() }
 
         cachedLinks = links
         val items = parseDigestText(text).map { item ->
-            // Attach a source link to each digest item (round-robin from available links)
             val linkIndex = item.hashCode().mod(links.size.coerceAtLeast(1))
             if (links.isNotEmpty()) {
                 val link = links[linkIndex.coerceIn(0, links.size - 1)]
@@ -126,81 +247,46 @@ class HomeViewModel(
                     error = if (!success) "ಇಂಟರ್ನೆಟ್ ಸಂಪರ್ಕವಿಲ್ಲ" else null,
                 )
             }
+            // Also refresh card data
+            val crops = prefsStore.crops.first()
+            if (crops.isNotEmpty()) fetchCardData(crops)
         }
     }
 
-    /**
-     * Parse the raw Kannada digest text into categorized items.
-     *
-     * The LLM generates a two-line format:
-     *   * 💰 ಬೆಲೆ: ಮಂಗಳೂರು ಮಂಡಿಯಲ್ಲಿ ಅಡಿಕೆ ₹42,000
-     *   → ಮಂಗಳೂರು ಮಂಡಿಯಲ್ಲಿ ಮಾರಾಟ ಲಾಭಕರ
-     *
-     * Line 1 = news text (starts with emoji category)
-     * Line 2 = action line (starts with →)
-     *
-     * We pair them up into DigestItem objects.
-     */
     private fun parseDigestText(raw: String): List<DigestItem> {
         if (raw.isBlank()) return emptyList()
-
         val lines = raw.split("\n")
             .map { it.trim().removePrefix("*").removePrefix("-").removePrefix("•").trim() }
             .filter { it.isNotBlank() }
-
         val items = mutableListOf<DigestItem>()
         var i = 0
-
         while (i < lines.size) {
             val line = lines[i]
-
-            // Skip lines that are just action lines without a parent news line
-            if (line.startsWith("→")) {
-                i++
-                continue
-            }
-
+            if (line.startsWith("→")) { i++; continue }
             val category = detectCategory(line)
             val badge = when (category) {
-                "price" -> "💰 ಬೆಲೆ"
-                "crop" -> "🌿 ಬೆಳೆ"
-                "scheme" -> "🏛️ ಯೋಜನೆ"
-                "weather" -> "🌧️ ಹವಾಮಾನ"
-                else -> "📰 ಸಾಮಾನ್ಯ"
+                "price" -> "💰 ಬೆಲೆ"; "crop" -> "🌿 ಬೆಳೆ"; "scheme" -> "🏛️ ಯೋಜನೆ"
+                "weather" -> "🌧️ ಹವಾಮಾನ"; "impact" -> "⚠️ ಪ್ರಭಾವ"; else -> "📰 ಸಾಮಾನ್ಯ"
             }
-
-            // Clean the line — remove emoji/category prefix
             var cleanText = line
-                .replace(Regex("^[💰🌿🏛️🌧️📰]+\\s*"), "")
-                .replace(Regex("^(ಬೆಲೆ|ಬೆಳೆ|ಯೋಜನೆ|ಹವಾಮಾನ|ಸಾಮಾನ್ಯ)[:\\s]*"), "")
+                .replace(Regex("^[💰🌿🏛️🌧️📰⚠️]+\\s*"), "")
+                .replace(Regex("^(ಬೆಲೆ|ಬೆಳೆ|ಯೋಜನೆ|ಹವಾಮಾನ|ಪ್ರಭಾವ|ಸಾಮಾನ್ಯ|Price|Crop|Scheme|Weather|Impact|General)[:\\s]*", RegexOption.IGNORE_CASE), "")
                 .trim()
-
-            // Check if action is in the same line (→ inline)
             var action = ""
             if ("→" in cleanText) {
                 val parts = cleanText.split("→", limit = 2)
                 cleanText = parts[0].trim()
                 action = "→ ${parts[1].trim()}"
             }
-
-            // Check if the NEXT line is an action line (→ on separate line)
             if (action.isEmpty() && i + 1 < lines.size && lines[i + 1].startsWith("→")) {
                 action = lines[i + 1].trim()
-                i++ // Skip the action line
+                i++
             }
-
             if (cleanText.length >= 5) {
-                items.add(DigestItem(
-                    category = category,
-                    badge = badge,
-                    text = cleanText,
-                    action = action,
-                ))
+                items.add(DigestItem(category = category, badge = badge, text = cleanText, action = action))
             }
-
             i++
         }
-
         return items
     }
 
@@ -211,6 +297,7 @@ class HomeViewModel(
             "🌿" in line || "ಬೆಳೆ" in line || "crop" in lower || "ರೋಗ" in line -> "crop"
             "🏛️" in line || "ಯೋಜನೆ" in line || "scheme" in lower || "ಕಿಸಾನ್" in line -> "scheme"
             "🌧️" in line || "ಹವಾಮಾನ" in line || "weather" in lower || "ಮಳೆ" in line -> "weather"
+            "⚠️" in line || "ಪ್ರಭಾವ" in line || "impact" in lower -> "impact"
             else -> "general"
         }
     }

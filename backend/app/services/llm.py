@@ -157,20 +157,20 @@ async def _call_sarvam(prompt: str) -> str | None:
         return None
 
 
-# --- The main function other files call ---
+# --- The main functions other files call ---
 
 async def generate(prompt: str) -> str:
     """
-    Send a prompt to the LLM fallback chain.
+    Send a prompt to the LLM fallback chain for CHAT / Q&A.
 
     Tries: Gemini → Groq → Sarvam → error message.
+    Gemini first because it has the best Kannada support for conversations.
     Returns the generated text (never raises an exception).
 
     Usage:
         from app.services.llm import generate
-        answer = await generate("Summarize these articles in Kannada: ...")
+        answer = await generate("Answer this farmer's question: ...")
     """
-    # Try each provider in order
     for name, call_fn in [
         ("Gemini", _call_gemini),
         ("Groq", _call_groq),
@@ -178,10 +178,36 @@ async def generate(prompt: str) -> str:
     ]:
         result = await call_fn(prompt)
         if result:
-            logger.info(f"LLM response from: {name}")
+            logger.info(f"LLM chat response from: {name}")
             return result
-        # If we reach here, this provider failed — try next
 
-    # All providers failed
-    logger.error("All LLM providers failed!")
+    logger.error("All LLM providers failed for chat!")
+    return FALLBACK_ERROR
+
+
+async def generate_digest(prompt: str) -> str:
+    """
+    Send a prompt to the LLM fallback chain for DIGEST generation.
+
+    Tries: Groq → Gemini → Sarvam → error message.
+    Groq first because it has a much higher free tier (14K req/day vs 1K)
+    and digest generation runs 5x/day via cron, so we preserve Gemini
+    quota for interactive chat.
+    Returns the generated text (never raises an exception).
+
+    Usage:
+        from app.services.llm import generate_digest
+        action_lines = await generate_digest("Generate action lines for: ...")
+    """
+    for name, call_fn in [
+        ("Groq", _call_groq),
+        ("Gemini", _call_gemini),
+        ("Sarvam", _call_sarvam),
+    ]:
+        result = await call_fn(prompt)
+        if result:
+            logger.info(f"LLM digest response from: {name}")
+            return result
+
+    logger.error("All LLM providers failed for digest!")
     return FALLBACK_ERROR

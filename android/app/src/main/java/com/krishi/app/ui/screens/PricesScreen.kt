@@ -39,9 +39,11 @@ private data class CropChip(val name: String, val nameKn: String, val emoji: Str
 private val crops = listOf(
     CropChip("Arecanut", "ಅಡಿಕೆ", "🌴"),
     CropChip("Coconut", "ತೆಂಗು", "🥥"),
+    CropChip("Copra", "ಕೊಬ್ಬರಿ", "🥥"),
     CropChip("Rice", "ಭತ್ತ", "🌾"),
-    CropChip("Black Pepper", "ಕಾಳುಮೆಣಸು", "🫚"),
+    CropChip("Black Pepper", "ಕಾಳುಮೆಣಸು", ""),
     CropChip("Cashew", "ಗೋಡಂಬಿ", "🥜"),
+    CropChip("Banana", "ಬಾಳೆ", "🍌"),
 )
 
 @Composable
@@ -175,6 +177,14 @@ fun PricesScreen(language: String) {
                             modifier = Modifier
                                 .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(6.dp))
                                 .padding(horizontal = 8.dp, vertical = 3.dp),
+                        )
+                    }
+                    // Date stamp
+                    if (data.date.isNotEmpty()) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "📅 ${data.date}",
+                            fontSize = 10.sp, color = Color.White.copy(alpha = 0.6f),
                         )
                     }
                 }

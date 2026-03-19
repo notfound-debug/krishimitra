@@ -20,7 +20,7 @@ import logging
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
-from app.services.llm import generate
+from app.services.llm import generate_digest
 from app.services.news import fetch_articles, categorize_article, Article
 from app.services import database as db
 
@@ -166,7 +166,7 @@ async def generate_daily_digest() -> dict:
 
     # Step 5: ONE small LLM call — action lines only (~500 tokens total)
     prompt = ACTION_LINE_PROMPT.format(count=len(top_articles), headlines=headlines)
-    raw_action_lines = await generate(prompt)
+    raw_action_lines = await generate_digest(prompt)
 
     # Step 6: Parse action lines and combine with article data
     kn_actions, en_actions = _parse_action_lines(raw_action_lines, len(top_articles))

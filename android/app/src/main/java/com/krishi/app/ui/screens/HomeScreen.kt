@@ -39,11 +39,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.krishi.app.ui.theme.KrishiColors
 import com.krishi.app.ui.viewmodel.DigestItem
+import com.krishi.app.ui.viewmodel.HomeCardData
 import com.krishi.app.ui.viewmodel.HomeViewModel
 import com.krishi.app.ui.viewmodel.SourceLink
 
 @Composable
-fun HomeHeader(language: String, onToggleLanguage: () -> Unit) {
+fun HomeHeader(language: String, taluk: String, onToggleLanguage: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -60,8 +61,8 @@ fun HomeHeader(language: String, onToggleLanguage: () -> Unit) {
                 color = KrishiColors.Primary,
             )
             Text(
-                text = if (language == "kn") "AI ಕೃಷಿ ಸಹಾಯಕ • ದಕ / ಉಡುಪಿ"
-                       else "AI Farm Assistant • DK / Udupi",
+                text = if (language == "kn") "AI ಕೃಷಿ ಸಹಾಯಕ • ${taluk.ifEmpty { "ದಕ / ಉಡುಪಿ" }}"
+                       else "AI Farm Assistant • ${taluk.ifEmpty { "DK / Udupi" }}",
                 fontSize = 12.sp,
                 color = KrishiColors.TextSecondary,
                 letterSpacing = 1.sp,
@@ -102,7 +103,7 @@ fun HomeHeader(language: String, onToggleLanguage: () -> Unit) {
 }
 
 @Composable
-fun HeroPriceCard() {
+fun HeroPriceCard(cards: HomeCardData, language: String) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -113,53 +114,82 @@ fun HeroPriceCard() {
     ) {
         Column {
             Text(
-                text = "ಅಡಿಕೆ • ಮಂಗಳೂರು APMC",
+                text = "${cards.primaryCropName} • ${cards.primaryCropApmc.ifEmpty { "APMC" }}",
                 fontSize = 13.sp,
-                color = Color.White.copy(alpha = 0.7f),
-                letterSpacing = 2.sp,
+                color = Color.White.copy(alpha = 0.8f),
             )
             Row(
                 verticalAlignment = Alignment.Bottom,
                 modifier = Modifier.padding(top = 4.dp),
             ) {
                 Text(
-                    text = "₹42,000",
+                    text = cards.primaryCropPrice,
                     fontSize = 26.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    text = "/ಕ್ವಿಂ",
+                    text = if (language == "kn") "/ಕ್ವಿಂ" else "/qtl",
                     fontSize = 13.sp,
                     color = Color.White.copy(alpha = 0.7f),
                     modifier = Modifier.padding(bottom = 5.dp),
                 )
             }
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = "▲ +₹1,200 ನಿನ್ನೆಗಿಂತ",
-                fontSize = 12.sp,
-                color = Color.White,
-                modifier = Modifier
-                    .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(6.dp))
-                    .padding(horizontal = 8.dp, vertical = 3.dp),
-            )
+            if (cards.primaryCropTrend.isNotEmpty()) {
+                Spacer(Modifier.height(6.dp))
+                val arrow = when (cards.primaryCropTrendDir) { "up" -> "▲"; "down" -> "▼"; else -> "—" }
+                Text(
+                    text = "$arrow ${cards.primaryCropTrend} ${if (language == "kn") "ನಿನ್ನೆಗಿಂತ" else "from yesterday"}",
+                    fontSize = 12.sp,
+                    color = Color.White,
+                    modifier = Modifier
+                        .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                )
+            }
+            // Date stamp
+            if (cards.priceDate.isNotEmpty()) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "📅 ${cards.priceDate} ${if (!cards.isRealPrice) if (language == "kn") "(ಅಂದಾಜು)" else "(Est.)" else ""}",
+                    fontSize = 10.sp,
+                    color = Color.White.copy(alpha = 0.6f),
+                )
+            }
         }
     }
 }
 
 @Composable
-fun StatsGrid() {
+fun StatsGrid(cards: HomeCardData, language: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        StatCard("🥥", "₹12.5K", "ತೆಂಗು", Modifier.weight(1f))
-        StatCard("🌧️", "28°C", "ಮಳೆ 3 ದಿನ", Modifier.weight(1f))
-        StatCard("🏛️", "3 ಹೊಸ", "ಯೋಜನೆ", Modifier.weight(1f))
+        // Card 1: Secondary crop price
+        StatCard(
+            emoji = "🥥",
+            value = cards.secondaryCropPrice,
+            label = cards.secondaryCropName.ifEmpty { if (language == "kn") "ತೆಂಗು" else "Coconut" },
+            modifier = Modifier.weight(1f),
+        )
+        // Card 2: Weather
+        StatCard(
+            emoji = if (cards.weatherDesc.contains("rain", true) || cards.weatherDesc.contains("ಮಳೆ")) "🌧️" else "☀️",
+            value = cards.weatherTemp,
+            label = cards.weatherDesc.take(12).ifEmpty { if (language == "kn") "ಹವಾಮಾನ" else "Weather" },
+            modifier = Modifier.weight(1f),
+        )
+        // Card 3: Smart insight
+        StatCard(
+            emoji = "💡",
+            value = if (language == "kn") "ಸಲಹೆ" else "Tip",
+            label = cards.insightText.take(15).ifEmpty { if (language == "kn") "ಲೋಡ್ ಆಗುತ್ತಿದೆ" else "Loading" },
+            modifier = Modifier.weight(1f),
+        )
     }
 }
 
@@ -342,7 +372,7 @@ fun HomeScreen(viewModel: HomeViewModel) {
                 .fillMaxSize()
                 .background(KrishiColors.Background),
         ) {
-            item { HomeHeader(language = language, onToggleLanguage = { viewModel.toggleLanguage() }) }
+            item { HomeHeader(language = language, taluk = uiState.farmerTaluk, onToggleLanguage = { viewModel.toggleLanguage() }) }
 
             item {
                 Spacer(
@@ -350,9 +380,9 @@ fun HomeScreen(viewModel: HomeViewModel) {
                 )
             }
 
-            item { HeroPriceCard() }
+            item { HeroPriceCard(cards = uiState.cards, language = language) }
 
-            item { StatsGrid() }
+            item { StatsGrid(cards = uiState.cards, language = language) }
 
             item {
                 SectionHeader(

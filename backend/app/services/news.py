@@ -116,10 +116,15 @@ async def _fetch_single_feed(
         if len(summary) > 500:
             summary = summary[:500] + "..."
 
+        # Extract link — some feeds use entry.link, others entry.links[0].href
+        link = entry.get("link", "")
+        if not link and hasattr(entry, "links") and entry.links:
+            link = entry.links[0].get("href", "")
+
         articles.append(Article(
             title=entry.get("title", "No Title"),
             summary=summary,
-            link=entry.get("link", ""),
+            link=link,
             source=source_name,
             published=published,
         ))
