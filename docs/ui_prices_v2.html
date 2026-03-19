@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KrishiMitra — Prices UI v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Kannada:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #111; font-family: 'DM Sans', sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+  .phone {
+    width: 360px; height: 780px; background: #FAFAFA;
+    border-radius: 28px; border: 2px solid #ccc; overflow: hidden;
+    position: relative; box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+  }
+  .phone-scroll { width: 100%; height: 100%; overflow-y: auto; -ms-overflow-style: none; scrollbar-width: none; }
+  .phone-scroll::-webkit-scrollbar { display: none; }
+
+  .statusbar { height: 28px; background: #1B5E20; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; font-size: 11px; color: #fff; position: sticky; top: 0; z-index: 20; }
+
+  .header { background: #fff; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #E0E0E0; }
+  .header .logo { font-size: 18px; font-weight: 700; color: #1B5E20; }
+  .header .logo span { font-size: 12px; font-weight: 500; color: #666; display: block; font-family: 'Noto Sans Kannada', sans-serif; }
+
+  /* Crop chips */
+  .chips-row { display: flex; gap: 6px; padding: 14px 16px; overflow-x: auto; -ms-overflow-style: none; scrollbar-width: none; align-items: center; }
+  .chips-row::-webkit-scrollbar { display: none; }
+  .chip {
+    font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: 20px;
+    white-space: nowrap; border: 1.5px solid #E0E0E0; color: #666; background: #fff;
+    font-family: 'Noto Sans Kannada', sans-serif; cursor: pointer; flex-shrink: 0;
+  }
+  .chip.active { background: #1B5E20; border-color: #1B5E20; color: #fff; }
+  .chip.more {
+    background: #E8F5E9; border-color: #C8E6C9; color: #1B5E20;
+    font-weight: 700; font-size: 12px;
+  }
+
+  /* Hero price */
+  .hero { margin: 0 14px 12px; padding: 16px 18px; background: #1B5E20; border-radius: 16px; }
+  .hero .label { font-size: 13px; color: rgba(255,255,255,0.8); font-family: 'Noto Sans Kannada', sans-serif; }
+  .hero .price-row { display: flex; align-items: baseline; gap: 6px; margin-top: 4px; }
+  .hero .price { font-size: 26px; font-weight: 700; color: #fff; }
+  .hero .unit { font-size: 13px; color: rgba(255,255,255,0.7); }
+  .hero .trend { display: inline-block; margin-top: 6px; font-size: 12px; color: #fff; background: rgba(255,255,255,0.15); padding: 3px 10px; border-radius: 6px; }
+  .hero .date { font-size: 10px; color: rgba(255,255,255,0.5); margin-top: 4px; }
+  .hero .source-tag { font-size: 9px; color: rgba(255,255,255,0.4); margin-top: 2px; }
+
+  /* Section */
+  .section { display: flex; justify-content: space-between; padding: 0 16px; margin: 4px 0 10px; }
+  .section .title { font-size: 13px; font-weight: 700; color: #1B5E20; }
+  .section .count { font-size: 11px; color: #666; background: #F0F0F0; padding: 2px 8px; border-radius: 10px; }
+
+  /* Price table */
+  .price-table { margin: 0 14px; border-radius: 12px; overflow: hidden; border: 1.5px solid #E0E0E0; background: #fff; }
+  .price-header { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; background: #F5F5F5; padding: 10px 14px; font-size: 10px; font-weight: 700; color: #888; }
+  .price-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; padding: 12px 14px; font-size: 12px; color: #333; border-bottom: 1px solid #F0F0F0; align-items: center; }
+  .price-row:last-child { border-bottom: none; }
+  .apmc-name { font-weight: 600; color: #222; font-family: 'Noto Sans Kannada', sans-serif; }
+  .best-tag { font-size: 8px; background: #E8F5E9; color: #1B5E20; padding: 1px 5px; border-radius: 3px; margin-left: 4px; font-weight: 700; }
+  .trend-up { color: #2E7D32; font-weight: 700; }
+  .trend-down { color: #C62828; font-weight: 700; }
+  .no-data { font-size: 10px; color: #999; }
+
+  /* Recommendation */
+  .reco { margin: 14px 14px; padding: 12px 16px; background: #FFF8E1; border-radius: 10px; border: 1.5px solid #FFE082; }
+  .reco .reco-label { font-size: 12px; font-weight: 700; color: #E65100; }
+  .reco .reco-text { font-size: 15px; color: #333; line-height: 1.5; font-family: 'Noto Sans Kannada', sans-serif; margin-top: 4px; }
+
+  /* No data card */
+  .no-data-card {
+    margin: 20px 14px; padding: 24px; background: #fff; border-radius: 12px;
+    border: 1.5px dashed #E0E0E0; text-align: center;
+  }
+  .no-data-card .emoji { font-size: 32px; }
+  .no-data-card .msg { font-size: 15px; color: #888; margin-top: 8px; font-family: 'Noto Sans Kannada', sans-serif; }
+
+  /* More crops popup */
+  .popup-overlay {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5); z-index: 30; display: flex; align-items: flex-end;
+  }
+  .popup {
+    background: #fff; border-radius: 20px 20px 0 0; padding: 20px;
+    width: 100%; max-height: 60%;
+  }
+  .popup .popup-title { font-size: 16px; font-weight: 700; color: #1B5E20; margin-bottom: 12px; font-family: 'Noto Sans Kannada', sans-serif; }
+  .popup .crop-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .popup .crop-item {
+    padding: 10px 16px; border-radius: 12px; font-size: 14px;
+    font-family: 'Noto Sans Kannada', sans-serif; font-weight: 500;
+    border: 1.5px solid #E0E0E0; background: #fff; color: #444; cursor: pointer;
+  }
+  .popup .crop-item.has-data { border-color: #C8E6C9; background: #F1F8E9; }
+  .popup .crop-item .sub { font-size: 10px; color: #888; display: block; }
+
+  /* Nav */
+  .bottomnav { position: sticky; bottom: 0; height: 70px; background: #1B3A1E; display: flex; align-items: center; justify-content: space-around; z-index: 20; }
+  .navitem { display: flex; flex-direction: column; align-items: center; gap: 4px; font-family: 'Noto Sans Kannada', sans-serif; padding: 4px 10px; }
+  .navitem .ni { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 10px; font-size: 22px; }
+  .navitem .nl { font-size: 13px; font-weight: 600; }
+  .navitem.inactive .ni, .navitem.inactive .nl { color: #A5D6A7; }
+  .navitem.active .ni { background: rgba(198,255,0,0.2); color: #C6FF00; }
+  .navitem.active .nl { color: #C6FF00; }
+
+  .content-area { padding-bottom: 78px; }
+
+  .screens { display: flex; gap: 30px; flex-wrap: wrap; justify-content: center; }
+  .screen-label { text-align: center; font-size: 11px; color: #aaa; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+
+<div style="color:#888; font-size: 12px; margin-bottom: 20px; text-align: center;">
+  <strong style="color:#2E7D32; font-size: 18px;">Prices UI v2</strong><br>
+  Profile crops first → "ಇನ್ನಷ್ಟು +" for more → Real data or "no data" state
+</div>
+
+<div class="screens">
+
+<!-- ===== SCREEN 1: Normal view with farmer's crops ===== -->
+<div>
+  <div class="screen-label">Prices — Farmer's crops first</div>
+  <div class="phone">
+    <div class="phone-scroll">
+      <div class="statusbar"><span>10:45</span><span>4G 🔋 82%</span></div>
+
+      <div class="header">
+        <div class="logo">KRISHI<span>APMC ಮಂಡಿ ಬೆಲೆಗಳು • ಸಿರ್ಸಿ</span></div>
+      </div>
+
+      <!-- Chips: farmer's crops + more button -->
+      <div class="chips-row">
+        <div class="chip active">🌴 ಅಡಿಕೆ</div>
+        <div class="chip">🥥 ತೆಂಗು</div>
+        <div class="chip">ಕಾಳುಮೆಣಸು</div>
+        <div class="chip">🥜 ಗೋಡಂಬಿ</div>
+        <div class="chip">🥥 ಕೊಬ್ಬರಿ</div>
+        <div class="chip more">ಇನ್ನಷ್ಟು +</div>
+      </div>
+
+      <div class="content-area">
+        <!-- Hero price -->
+        <div class="hero">
+          <div class="label">🌴 ಅಡಿಕೆ — ಅತ್ಯುತ್ತಮ ಬೆಲೆ</div>
+          <div class="price-row">
+            <span class="price">₹54,018</span>
+            <span class="unit">/ಕ್ವಿಂ @ ಚಾಮರಾಜನಗರ</span>
+          </div>
+          <div class="trend">▲ ಇಂದಿನ ಬೆಲೆ</div>
+          <div class="date">📅 19 ಮಾರ್ಚ್ 2026</div>
+          <div class="source-tag">ಮೂಲ: napanta.com / Agmarknet</div>
+        </div>
+
+        <div class="section">
+          <div class="title">// ಎಲ್ಲಾ ಮಂಡಿ</div>
+          <div class="count">7 ಮಂಡಿ</div>
+        </div>
+
+        <!-- Price table with REAL data -->
+        <div class="price-table">
+          <div class="price-header">
+            <span>ಮಂಡಿ</span><span>ಕನಿಷ್ಠ</span><span>ಗರಿಷ್ಠ</span><span>ಟ್ರೆಂಡ್</span>
+          </div>
+          <div class="price-row">
+            <span class="apmc-name">ಚಾಮರಾಜನಗರ <span class="best-tag">ಉತ್ತಮ</span></span>
+            <span>₹54.0K</span><span style="color:#1B5E20;font-weight:700;">₹54.0K</span><span class="trend-up">—</span>
+          </div>
+          <div class="price-row">
+            <span class="apmc-name">ಚನ್ನಗಿರಿ</span>
+            <span>₹48.0K</span><span>₹54.8K</span><span class="trend-up">—</span>
+          </div>
+          <div class="price-row">
+            <span class="apmc-name">ಶಿವಮೊಗ್ಗ</span>
+            <span>₹30.0K</span><span>₹51.5K</span><span class="trend-up">—</span>
+          </div>
+          <div class="price-row">
+            <span class="apmc-name">ಸಿರ್ಸಿ</span>
+            <span>₹31.9K</span><span>₹43.6K</span><span class="trend-up">—</span>
+          </div>
+          <div class="price-row">
+            <span class="apmc-name">ಸಾಗರ</span>
+            <span>₹15.3K</span><span>₹36.3K</span><span>—</span>
+          </div>
+          <div class="price-row">
+            <span class="apmc-name">ಯಲ್ಲಾಪುರ</span>
+            <span>₹13.9K</span><span>₹35.0K</span><span>—</span>
+          </div>
+          <div class="price-row">
+            <span class="apmc-name">ಹೊನ್ನಾಳಿ</span>
+            <span>₹24.0K</span><span>₹30.0K</span><span>—</span>
+          </div>
+        </div>
+
+        <!-- Recommendation -->
+        <div class="reco">
+          <div class="reco-label">💡 ಶಿಫಾರಸು</div>
+          <div class="reco-text">ಚಾಮರಾಜನಗರ ಮಂಡಿಯಲ್ಲಿ ಅತ್ಯುತ್ತಮ ಬೆಲೆ ₹54,018/ಕ್ವಿಂ. ಸಿರ್ಸಿಯಲ್ಲಿ ₹43,618.</div>
+        </div>
+      </div>
+
+      <div class="bottomnav">
+        <div class="navitem inactive"><div class="ni">⌂</div><div class="nl">ಮುಖಪುಟ</div></div>
+        <div class="navitem inactive"><div class="ni">✦</div><div class="nl">ಕೇಳಿ</div></div>
+        <div class="navitem active"><div class="ni">◎</div><div class="nl">ಬೆಲೆ</div></div>
+        <div class="navitem inactive"><div class="ni">▤</div><div class="nl">ಯೋಜನೆ</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SCREEN 2: "More crops" popup ===== -->
+<div>
+  <div class="screen-label">Prices — "ಇನ್ನಷ್ಟು +" tapped</div>
+  <div class="phone">
+    <div class="phone-scroll">
+      <div class="statusbar"><span>10:45</span><span>4G 🔋</span></div>
+
+      <div class="header">
+        <div class="logo">KRISHI<span>APMC ಮಂಡಿ ಬೆಲೆಗಳು</span></div>
+      </div>
+
+      <div class="chips-row" style="opacity:0.3;">
+        <div class="chip active">🌴 ಅಡಿಕೆ</div>
+        <div class="chip">🥥 ತೆಂಗು</div>
+      </div>
+
+      <!-- Popup overlay -->
+      <div class="popup-overlay">
+        <div class="popup">
+          <div class="popup-title">🌿 ಬೆಳೆ ಆಯ್ಕೆ ಮಾಡಿ</div>
+          <div class="crop-grid">
+            <div class="crop-item has-data">🌴 ಅಡಿಕೆ<span class="sub">107 ಮಂಡಿ</span></div>
+            <div class="crop-item has-data">🥥 ತೆಂಗು<span class="sub">28 ಮಂಡಿ</span></div>
+            <div class="crop-item has-data">🥥 ಕೊಬ್ಬರಿ<span class="sub">18 ಮಂಡಿ</span></div>
+            <div class="crop-item has-data">ಕಾಳುಮೆಣಸು<span class="sub">18 ಮಂಡಿ</span></div>
+            <div class="crop-item has-data">🥜 ಗೋಡಂಬಿ<span class="sub">3 ಮಂಡಿ</span></div>
+            <div class="crop-item has-data">🍌 ಬಾಳೆ<span class="sub">14 ಮಂಡಿ</span></div>
+            <div class="crop-item has-data">🌾 ಭತ್ತ<span class="sub">12 ಮಂಡಿ</span></div>
+            <div class="crop-item has-data">ಅರಿಶಿನ<span class="sub">6 ಮಂಡಿ</span></div>
+            <div class="crop-item has-data">ರಾಗಿ<span class="sub">7 ಮಂಡಿ</span></div>
+            <div class="crop-item has-data">🧅 ಈರುಳ್ಳಿ<span class="sub">7 ಮಂಡಿ</span></div>
+            <div class="crop-item has-data">🍅 ಟೊಮ್ಯಾಟೊ<span class="sub">7 ಮಂಡಿ</span></div>
+            <div class="crop-item has-data">🥔 ಆಲೂಗಡ್ಡೆ<span class="sub">7 ಮಂಡಿ</span></div>
+            <div class="crop-item has-data">🌶️ ಹಸಿಮೆಣಸು<span class="sub">7 ಮಂಡಿ</span></div>
+            <div class="crop-item has-data">🥭 ಮಾವು<span class="sub">7 ಮಂಡಿ</span></div>
+            <div class="crop-item">ರಬ್ಬರ್<span class="sub">ಬೆಲೆ ಇಲ್ಲ</span></div>
+            <div class="crop-item">ಕೋಕೋ<span class="sub">ಬೆಲೆ ಇಲ್ಲ</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bottomnav">
+        <div class="navitem inactive"><div class="ni">⌂</div><div class="nl">ಮುಖಪುಟ</div></div>
+        <div class="navitem inactive"><div class="ni">✦</div><div class="nl">ಕೇಳಿ</div></div>
+        <div class="navitem active"><div class="ni">◎</div><div class="nl">ಬೆಲೆ</div></div>
+        <div class="navitem inactive"><div class="ni">▤</div><div class="nl">ಯೋಜನೆ</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SCREEN 3: No data state ===== -->
+<div>
+  <div class="screen-label">Prices — No data for a crop</div>
+  <div class="phone">
+    <div class="phone-scroll">
+      <div class="statusbar"><span>10:46</span><span>4G 🔋</span></div>
+
+      <div class="header">
+        <div class="logo">KRISHI<span>APMC ಮಂಡಿ ಬೆಲೆಗಳು</span></div>
+      </div>
+
+      <div class="chips-row">
+        <div class="chip">🌴 ಅಡಿಕೆ</div>
+        <div class="chip">🥥 ತೆಂಗು</div>
+        <div class="chip active">🌳 ರಬ್ಬರ್</div>
+        <div class="chip">ಕಾಳುಮೆಣಸು</div>
+        <div class="chip more">ಇನ್ನಷ್ಟು +</div>
+      </div>
+
+      <div class="content-area">
+        <div class="no-data-card">
+          <div class="emoji">📊</div>
+          <div class="msg">🌳 ರಬ್ಬರ್ ಬೆಲೆ ಇಂದು ಲಭ್ಯವಿಲ್ಲ</div>
+          <div style="font-size: 13px; color: #aaa; margin-top: 8px; font-family: 'Noto Sans Kannada', sans-serif;">
+            ಈ ಬೆಳೆಯ ಬೆಲೆ ಮಂಡಿಯಿಂದ ವರದಿಯಾಗಿಲ್ಲ.<br>
+            ಇತರ ಬೆಳೆ ಆಯ್ಕೆ ಮಾಡಿ.
+          </div>
+        </div>
+      </div>
+
+      <div class="bottomnav">
+        <div class="navitem inactive"><div class="ni">⌂</div><div class="nl">ಮುಖಪುಟ</div></div>
+        <div class="navitem inactive"><div class="ni">✦</div><div class="nl">ಕೇಳಿ</div></div>
+        <div class="navitem active"><div class="ni">◎</div><div class="nl">ಬೆಲೆ</div></div>
+        <div class="navitem inactive"><div class="ni">▤</div><div class="nl">ಯೋಜನೆ</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+</body>
+</html>

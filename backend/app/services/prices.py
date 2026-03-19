@@ -97,7 +97,33 @@ APMC_NAME_KN: dict[str, str] = {
 
 
 # ---------------------------------------------------------------------------
-# kisandeals.com scraper config (primary — more reliable than commodityonline)
+# napanta.com scraper config (PRIMARY — no bot protection, daily data)
+# ---------------------------------------------------------------------------
+
+NAPANTA_SLUGS: dict[str, str] = {
+    "arecanut": "arecanut-betelnut-supari",
+    "coconut": "coconut",
+    "copra": "copra",
+    "banana": "banana",
+    "rice": "paddy-dhan-common",
+    "paddy": "paddy-dhan-common",
+    "black pepper": "black-pepper",
+    "cashewnut": "cashewnuts",
+    "cashew": "cashewnuts",
+    "turmeric": "turmeric",
+    "ragi": "ragi-finger-millet",
+    "onion": "onion",
+    "tomato": "tomato",
+    "potato": "potato",
+    "green chilli": "green-chilli",
+    "mango": "mango",
+    "maize": "maize",
+    "groundnut": "groundnut",
+}
+
+
+# ---------------------------------------------------------------------------
+# kisandeals.com scraper config (backup — needs User-Agent, sometimes blocked)
 # ---------------------------------------------------------------------------
 
 KISANDEALS_SLUGS: dict[str, str] = {
@@ -459,7 +485,107 @@ async def _fetch_from_data_gov(crop_key: str) -> dict[str, Any] | None:
 
 
 # ---------------------------------------------------------------------------
-# kisandeals.com scraper (primary)
+# napanta.com scraper (PRIMARY — no bot protection, works from everywhere)
+# ---------------------------------------------------------------------------
+
+async def _try_napanta(crop_key: str) -> dict[str, Any] | None:
+    """Scrape mandi prices from napanta.com for Karnataka. No auth needed."""
+    slug = NAPANTA_SLUGS.get(crop_key)
+    if not slug:
+        return None
+
+    display_name = CROP_DISPLAY_NAME.get(crop_key, crop_key.title())
+    crop_kn = CROP_NAME_KN.get(crop_key, display_name)
+
+    from datetime import date as d
+    today = d.today()
+    date_str = today.strftime("%d-%b-%Y")  # e.g. "19-Mar-2026"
+
+    url = f"https://www.napanta.com/agri-commodity-prices/karnataka/{slug}/{date_str}/"
+    try:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=15) as client:
+            resp = await client.get(url)
+            if resp.status_code != 200:
+                logger.warning(f"napanta returned {resp.status_code} for {crop_key}")
+                return None
+    except Exception as e:
+        logger.warning(f"napanta request failed for {crop_key}: {e}")
+        return None
+
+    try:
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(resp.text, "html.parser")
+        tables = soup.find_all("table")
+
+        # Find the mandi-level table (has District, Market, Commodity columns)
+        price_table = None
+        for t in tables:
+            rows = t.find_all("tr")
+            if len(rows) > 3:
+                header_text = " ".join(h.text.strip().lower() for h in rows[0].find_all(["th", "td"]))
+                if "district" in header_text or "market" in header_text:
+                    price_table = t
+                    break
+
+        if not price_table:
+            return None
+
+        rows = price_table.find_all("tr")[1:]  # skip header
+        prices = []
+
+        for row in rows:
+            cells = row.find_all("td")
+            if len(cells) < 7:
+                continue
+
+            district = cells[0].text.strip()
+            market = cells[1].text.strip()
+
+            try:
+                def parse_p(txt):
+                    return int(float(txt.replace("₹", "").replace(",", "").replace(" ", "").strip()))
+                max_p = parse_p(cells[4].text)
+                modal_p = parse_p(cells[5].text)
+                min_p = parse_p(cells[6].text)
+            except (ValueError, IndexError):
+                continue
+
+            if min_p <= 0 and max_p <= 0:
+                continue
+
+            prices.append({
+                "apmc": market,
+                "apmc_district": district,
+                "min_price": min_p,
+                "max_price": max_p,
+                "modal_price": modal_p,
+                "trend": "",
+                "trend_direction": "stable",
+            })
+
+        if not prices:
+            return None
+
+        prices.sort(key=lambda x: x["max_price"], reverse=True)
+        best = prices[0]
+
+        return {
+            "crop": display_name,
+            "crop_kn": crop_kn,
+            "date": str(today),
+            "best_apmc": best["apmc"],
+            "prices": prices,
+            "recommendation_kn": f"{best['apmc']} ಮಂಡಿಯಲ್ಲಿ ಅತ್ಯುತ್ತಮ ಬೆಲೆ ₹{best['max_price']:,}/ಕ್ವಿಂ.",
+            "recommendation_en": f"Best price at {best['apmc']} mandi: Rs.{best['max_price']:,}/quintal.",
+        }
+
+    except Exception as e:
+        logger.error(f"napanta parse error for {crop_key}: {e}")
+        return None
+
+
+# ---------------------------------------------------------------------------
+# kisandeals.com scraper (backup — often blocked by bot protection)
 # ---------------------------------------------------------------------------
 
 async def _try_kisandeals(crop_key: str) -> dict[str, Any] | None:
@@ -729,18 +855,18 @@ async def scrape_and_save_all_crops() -> dict:
         crop_kn = CROP_NAME_KN.get(crop_key, display_name)
 
         try:
-            # Try kisandeals first (most reliable)
+            # Try napanta first (no bot protection, works everywhere)
+            scraped = await _try_napanta(crop_key)
+            if scraped and scraped.get("prices"):
+                db.save_mandi_prices(display_name, crop_kn, scraped["prices"], "napanta")
+                results[crop_key] = f"OK ({len(scraped['prices'])} markets via napanta)"
+                continue
+
+            # Try kisandeals (backup)
             scraped = await _try_kisandeals(crop_key)
             if scraped and scraped.get("prices"):
                 db.save_mandi_prices(display_name, crop_kn, scraped["prices"], "kisandeals")
                 results[crop_key] = f"OK ({len(scraped['prices'])} markets via kisandeals)"
-                continue
-
-            # Try commodityonline
-            scraped = await _try_commodityonline(crop_key)
-            if scraped and scraped.get("prices"):
-                db.save_mandi_prices(display_name, crop_kn, scraped["prices"], "commodityonline")
-                results[crop_key] = f"OK ({len(scraped['prices'])} markets via commodityonline)"
                 continue
 
             # Try data.gov.in
@@ -827,18 +953,28 @@ async def fetch_prices(crop: str) -> dict[str, Any]:
             logger.info(f"Returning DB prices for '{crop_key}': {len(prices)} APMCs, date={latest_date}")
             return result
 
-    # --- Strategy 2: Scrape kisandeals.com (primary scraper) + save to DB ---
+    # --- Strategy 2: Scrape napanta.com (primary — no bot protection) ---
+    try:
+        scraped = await _try_napanta(crop_key)
+        if scraped is not None:
+            scraped["price_source"] = "napanta"
+            db.save_mandi_prices(display_name, crop_kn, scraped["prices"], source="napanta")
+            logger.info(f"napanta: saved prices for '{crop_key}': {len(scraped['prices'])} markets")
+            return scraped
+    except Exception:
+        logger.exception("napanta scrape failed for '%s'", crop_key)
+
+    # --- Strategy 3: Scrape kisandeals (backup — often blocked) ---
     try:
         scraped = await _try_kisandeals(crop_key)
         if scraped is not None:
             scraped["price_source"] = "kisandeals"
             db.save_mandi_prices(display_name, crop_kn, scraped["prices"], source="kisandeals")
-            logger.info(f"kisandeals: saved prices for '{crop_key}': {len(scraped['prices'])} markets")
             return scraped
     except Exception:
         logger.exception("kisandeals scrape failed for '%s'", crop_key)
 
-    # --- Strategy 3: Scrape commodityonline (backup scraper) ---
+    # --- Strategy 4: Scrape commodityonline (backup) ---
     try:
         scraped = await _try_commodityonline(crop_key)
         if scraped is not None:

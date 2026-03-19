@@ -57,32 +57,25 @@ jobs:
               exit(1)
 
           CROPS = {
-              "ARECANUT(BETELNUT-SUPARI)": ("Arecanut", "ಅಡಿಕೆ"),
-              "COCONUT": ("Coconut", "ತೆಂಗು"),
-              "COPRA": ("Copra", "ಕೊಬ್ಬರಿ"),
-              "PADDY(DHAN)(COMMON)": ("Rice", "ಭತ್ತ"),
-              "BLACK-PEPPER": ("Black Pepper", "ಕಾಳುಮೆಣಸು"),
-              "CASHEWNUTS": ("Cashew", "ಗೋಡಂಬಿ"),
-              "BANANA": ("Banana", "ಬಾಳೆ"),
+              "arecanut-betelnut-supari": ("Arecanut", "ಅಡಿಕೆ"),
+              "coconut": ("Coconut", "ತೆಂಗು"),
+              "copra": ("Copra", "ಕೊಬ್ಬರಿ"),
+              "paddy-dhan-common": ("Rice", "ಭತ್ತ"),
+              "black-pepper": ("Black Pepper", "ಕಾಳುಮೆಣಸು"),
+              "cashewnuts": ("Cashew", "ಗೋಡಂಬಿ"),
+              "banana": ("Banana", "ಬಾಳೆ"),
           }
 
-          TARGET_APMCS = {
-              "mangalore", "puttur", "sullia", "bantwal", "belthangdi", "belthangady",
-              "udupi", "kundapura", "karkala", "sirsi", "kumta", "siddapur",
-              "honnavar", "sagar", "shimoga",
-          }
+          # No APMC filter — save ALL Karnataka mandis from napanta
 
           today = str(date.today())
           all_rows = []
 
           for slug, (crop_en, crop_kn) in CROPS.items():
-              url = f"https://www.kisandeals.com/mandiprices/{slug}/KARNATAKA/ALL"
+              date_str = date.today().strftime("%d-%b-%Y")
+              url = f"https://www.napanta.com/agri-commodity-prices/karnataka/{slug}/{date_str}/"
               try:
-                  headers = {
-                      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                      "Accept": "text/html,application/xhtml+xml",
-                  }
-                  r = httpx.get(url, headers=headers, timeout=20, follow_redirects=True)
+                  r = httpx.get(url, timeout=20, follow_redirects=True)
                   if r.status_code != 200:
                       print(f"  {crop_en}: HTTP {r.status_code}")
                       continue
@@ -90,65 +83,53 @@ jobs:
                   soup = BeautifulSoup(r.text, "html.parser")
                   tables = soup.find_all("table")
 
-                  # Find detailed table (usually last one with mandi column)
+                  # Find mandi-level table (has District, Market columns)
                   price_table = None
                   for t in tables:
-                      rows = t.find_all("tr")
-                      if len(rows) > 5:
-                          headers = [h.text.strip().lower() for h in rows[0].find_all(["th", "td"])]
-                          if any("mandi" in h or "market" in h for h in headers):
+                      trs = t.find_all("tr")
+                      if len(trs) > 3:
+                          hdr = " ".join(h.text.strip().lower() for h in trs[0].find_all(["th","td"]))
+                          if "district" in hdr or "market" in hdr:
                               price_table = t
                               break
-                  if not price_table and len(tables) >= 4:
-                      price_table = tables[-1]
+
                   if not price_table:
-                      print(f"  {crop_en}: no price table found")
+                      print(f"  {crop_en}: no price table")
                       continue
 
                   rows = price_table.find_all("tr")[1:]
-                  seen = set()
                   count = 0
 
                   for row in rows:
                       cells = row.find_all("td")
-                      if len(cells) < 8:
+                      if len(cells) < 7:
                           continue
-
-                      mandi = cells[4].text.strip().lower()
-                      matched = None
-                      for t in TARGET_APMCS:
-                          if t in mandi:
-                              matched = t.title()
-                              if matched == "Belthangdi":
-                                  matched = "Belthangady"
-                              break
-
-                      if not matched or matched in seen:
-                          continue
-                      seen.add(matched)
-
+                      district = cells[0].text.strip()
+                      market = cells[1].text.strip()
                       try:
                           def pp(txt):
-                              return int(float(txt.replace("₹", "").replace(",", "").strip()))
-                          min_p = pp(cells[5].text)
-                          modal_p = pp(cells[6].text)
-                          max_p = pp(cells[7].text)
+                              return int(float(txt.replace("₹","").replace(",","").replace(" ","").strip()))
+                          max_p = pp(cells[4].text)
+                          modal_p = pp(cells[5].text)
+                          min_p = pp(cells[6].text)
                       except:
+                          continue
+                      if min_p <= 0 and max_p <= 0:
                           continue
 
                       all_rows.append({
                           "crop": crop_en,
                           "crop_kn": crop_kn,
-                          "apmc": matched,
+                          "apmc": market,
                           "min_price": min_p,
                           "max_price": max_p,
                           "modal_price": modal_p,
                           "date": today,
-                          "source": "kisandeals",
+                          "source": "napanta",
                       })
                       count += 1
 
-                  print(f"  {crop_en}: {count} APMCs scraped")
+                  print(f"  {crop_en}: {count} mandis scraped")
 
               except Exception as e:
                   print(f"  {crop_en}: ERROR {e}")
