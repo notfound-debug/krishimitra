@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KrishiMitra — Final Design v2 (Sunlight Ready)</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Kannada:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1a1a1a;
+    color: #fff;
+    font-family: 'DM Sans', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px 20px;
+    min-height: 100vh;
+  }
+  h1 { font-family: 'Space Mono', monospace; font-size: 22px; color: #2E7D32; margin-bottom: 6px; }
+  .subtitle { color: #888; font-size: 13px; margin-bottom: 40px; }
+  .screens { display: flex; gap: 40px; flex-wrap: wrap; justify-content: center; }
+  .screen-label {
+    text-align: center;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: #aaa;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  /* Phone shell */
+  .phone {
+    width: 370px;
+    height: 780px;
+    background: #FAFAFA;
+    border-radius: 36px;
+    border: 3px solid #ddd;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  }
+  .phone-scroll {
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .phone-scroll::-webkit-scrollbar { display: none; }
+
+  /* Status bar */
+  .statusbar {
+    height: 32px;
+    background: #1B5E20;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #fff;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+
+  /* Header */
+  .header {
+    padding: 14px 20px 12px;
+    background: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #E8E8E8;
+  }
+  .header .logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 19px;
+    font-weight: 700;
+    color: #1B5E20;
+  }
+  .header .logo span {
+    color: #666;
+    font-weight: 400;
+    font-size: 10px;
+    display: block;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-top: 1px;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .header .date-pill {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: #1B5E20;
+    background: #E8F5E9;
+    border: 1px solid #C8E6C9;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-weight: 700;
+  }
+
+  /* Hero price card */
+  .hero-price {
+    margin: 14px 16px;
+    padding: 18px 20px;
+    background: #1B5E20;
+    border-radius: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-price::after {
+    content: '';
+    position: absolute;
+    top: -30px;
+    right: -30px;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+  }
+  .hero-price .crop-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: #A5D6A7;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .hero-price .price-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .hero-price .big-price {
+    font-family: 'Space Mono', monospace;
+    font-size: 30px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .hero-price .unit {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: #A5D6A7;
+  }
+  .hero-price .trend {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 6px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 6px;
+  }
+  .trend-up { color: #fff; background: rgba(255,255,255,0.15); }
+  .trend-down { color: #FFCDD2; background: rgba(255,82,82,0.2); }
+
+  /* Quick stats grid */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    padding: 0 16px;
+    margin-bottom: 16px;
+  }
+  .stat-card {
+    background: #fff;
+    border: 1.5px solid #E0E0E0;
+    border-radius: 12px;
+    padding: 12px 8px;
+    text-align: center;
+  }
+  .stat-card .stat-icon { font-size: 18px; margin-bottom: 4px; }
+  .stat-card .stat-val {
+    font-family: 'Space Mono', monospace;
+    font-size: 15px;
+    font-weight: 700;
+    color: #1B5E20;
+  }
+  .stat-card .stat-lbl {
+    font-size: 10px;
+    color: #888;
+    margin-top: 2px;
+    font-weight: 500;
+  }
+
+  /* Section header */
+  .section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 18px;
+    margin: 2px 0 10px;
+  }
+  .section .sec-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: #1B5E20;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .section .sec-count {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: #666;
+    background: #F0F0F0;
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+
+  /* Digest news items */
+  .digest-item {
+    background: #fff;
+    margin: 0 16px 8px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border-left: 4px solid;
+    border-top: 1px solid #F0F0F0;
+    border-right: 1px solid #F0F0F0;
+    border-bottom: 1px solid #F0F0F0;
+    font-family: 'Noto Sans Kannada', 'DM Sans', sans-serif;
+    font-size: 13.5px;
+    color: #222;
+    line-height: 1.6;
+  }
+  .digest-item .badge {
+    display: inline-block;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+  .digest-item .action {
+    display: block;
+    margin-top: 6px;
+    font-size: 12px;
+    color: #1B5E20;
+    font-weight: 600;
+  }
+
+  /* Category colors — high contrast on white */
+  .di-price { border-left-color: #E65100; }
+  .di-price .badge { background: #FFF3E0; color: #E65100; }
+  .di-crop { border-left-color: #2E7D32; }
+  .di-crop .badge { background: #E8F5E9; color: #2E7D32; }
+  .di-scheme { border-left-color: #1565C0; }
+  .di-scheme .badge { background: #E3F2FD; color: #1565C0; }
+  .di-weather { border-left-color: #00838F; }
+  .di-weather .badge { background: #E0F7FA; color: #00838F; }
+  .di-general { border-left-color: #6A1B9A; }
+  .di-general .badge { background: #F3E5F5; color: #6A1B9A; }
+
+  /* Bottom nav — Option D dark style */
+  .bottomnav {
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 64px;
+    background: #071207;
+    border-top: 1px solid rgba(46,125,50,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    z-index: 20;
+  }
+  .navitem {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    font-family: 'Noto Sans Kannada', sans-serif;
+    font-size: 9px;
+    font-weight: 600;
+    color: #4CAF50;
+    opacity: 0.5;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .navitem.active { opacity: 1; color: #C6FF00; }
+  .navitem .ni {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    font-size: 15px;
+    transition: background 0.2s;
+  }
+  .navitem.active .ni {
+    background: rgba(198,255,0,0.1);
+  }
+
+  .content-area { padding-bottom: 72px; }
+
+  /* ===== ASK SCREEN ===== */
+  .chat-area { padding: 10px 16px 80px; }
+  .chat-bubble-bot {
+    background: #fff;
+    border: 1.5px solid #E0E0E0;
+    border-radius: 16px 16px 16px 4px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    font-family: 'Noto Sans Kannada', 'DM Sans', sans-serif;
+    font-size: 13.5px;
+    color: #222;
+    line-height: 1.6;
+    max-width: 90%;
+  }
+  .chat-bubble-user {
+    background: #1B5E20;
+    border-radius: 16px 16px 4px 16px;
+    padding: 12px 16px;
+    margin-bottom: 10px;
+    margin-left: auto;
+    font-family: 'Noto Sans Kannada', 'DM Sans', sans-serif;
+    font-size: 13.5px;
+    color: #fff;
+    line-height: 1.5;
+    max-width: 85%;
+    text-align: right;
+  }
+  .chat-input-bar {
+    position: absolute;
+    bottom: 64px;
+    left: 0;
+    right: 0;
+    padding: 10px 16px;
+    background: #FAFAFA;
+    border-top: 1px solid #E0E0E0;
+    display: flex;
+    gap: 8px;
+  }
+  .chat-input {
+    flex: 1;
+    background: #fff;
+    border: 1.5px solid #E0E0E0;
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-family: 'Noto Sans Kannada', 'DM Sans', sans-serif;
+    font-size: 13px;
+    color: #999;
+  }
+  .chat-send {
+    width: 42px;
+    height: 42px;
+    background: #1B5E20;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: #fff;
+  }
+  .source-tag {
+    font-size: 10px;
+    color: #888;
+    margin-top: 4px;
+  }
+
+  /* ===== PRICES SCREEN ===== */
+  .price-table {
+    margin: 0 16px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1.5px solid #E0E0E0;
+    background: #fff;
+  }
+  .price-header-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    background: #F5F5F5;
+    padding: 10px 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    color: #888;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .price-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    padding: 12px 14px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: #333;
+    border-bottom: 1px solid #F0F0F0;
+    align-items: center;
+  }
+  .price-row:last-child { border-bottom: none; }
+  .price-row .apmc-name {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #222;
+  }
+  .price-row .best-tag {
+    font-size: 7px;
+    background: #E8F5E9;
+    color: #1B5E20;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-left: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+
+  /* Crop selector chips */
+  .crop-chips {
+    display: flex;
+    gap: 6px;
+    padding: 14px 16px 14px;
+    overflow-x: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .crop-chips::-webkit-scrollbar { display: none; }
+  .chip {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 7px 14px;
+    border-radius: 20px;
+    white-space: nowrap;
+    border: 1.5px solid #E0E0E0;
+    color: #666;
+    background: #fff;
+  }
+  .chip.active {
+    background: #1B5E20;
+    border-color: #1B5E20;
+    color: #fff;
+  }
+
+  /* Recommendation box */
+  .reco-box {
+    margin: 14px 16px;
+    padding: 12px 16px;
+    background: #FFF8E1;
+    border-radius: 10px;
+    border: 1.5px solid #FFE082;
+  }
+  .reco-box .reco-label {
+    font-size: 9px;
+    font-weight: 700;
+    color: #E65100;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+  .reco-box .reco-text {
+    font-family: 'Noto Sans Kannada', 'DM Sans', sans-serif;
+    font-size: 12.5px;
+    color: #333;
+    line-height: 1.5;
+  }
+
+  /* ===== SCHEMES SCREEN ===== */
+  .profile-bar {
+    margin: 14px 16px;
+    background: #fff;
+    border: 1.5px solid #E0E0E0;
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .profile-bar .pf-icon { font-size: 22px; }
+  .profile-bar .pf-info {
+    font-size: 12px;
+    color: #333;
+    font-weight: 500;
+  }
+  .profile-bar .pf-sub {
+    font-size: 10px;
+    color: #1B5E20;
+    font-weight: 700;
+    margin-top: 2px;
+  }
+
+  .scheme-card {
+    background: #fff;
+    margin: 0 16px 10px;
+    padding: 16px;
+    border-radius: 12px;
+    border: 1.5px solid #E0E0E0;
+  }
+  .scheme-card .elig-tag {
+    font-size: 9px;
+    color: #1B5E20;
+    background: #E8F5E9;
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-bottom: 6px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .scheme-card .scheme-name {
+    font-family: 'Noto Sans Kannada', 'DM Sans', sans-serif;
+    font-size: 14.5px;
+    font-weight: 700;
+    color: #222;
+    margin-bottom: 2px;
+  }
+  .scheme-card .scheme-benefit {
+    font-family: 'Space Mono', monospace;
+    font-size: 20px;
+    font-weight: 700;
+    color: #1B5E20;
+    margin: 4px 0;
+  }
+  .scheme-card .scheme-benefit span {
+    font-size: 11px;
+    color: #888;
+    font-weight: 400;
+  }
+  .scheme-card .scheme-detail {
+    font-size: 12px;
+    color: #555;
+    line-height: 1.6;
+    margin-bottom: 10px;
+    font-family: 'Noto Sans Kannada', 'DM Sans', sans-serif;
+  }
+  .scheme-card .scheme-btn {
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: #fff;
+    background: #1B5E20;
+    padding: 8px 16px;
+    border-radius: 8px;
+    display: inline-block;
+    font-weight: 700;
+  }
+</style>
+</head>
+<body>
+
+<h1>KRISHIMITRA — v2 Sunlight Ready</h1>
+<p class="subtitle">Light theme, high contrast, readable outdoors. Same layout as v1.</p>
+
+<div class="screens">
+
+  <!-- ============ HOME SCREEN ============ -->
+  <div>
+    <div class="screen-label">// Home — Daily Digest</div>
+    <div class="phone">
+      <div class="phone-scroll">
+        <div class="statusbar"><span>9:41 AM</span><span>4G 🔋 87%</span></div>
+
+        <div class="header">
+          <div class="logo">KRISHI<span>AI ಕೃಷಿ ಸಹಾಯಕ • ದಕ / ಉಡುಪಿ</span></div>
+          <div class="date-pill">MAR 18</div>
+        </div>
+
+        <div class="hero-price">
+          <div class="crop-label">ಅಡಿಕೆ • ಮಂಗಳೂರು APMC</div>
+          <div class="price-row" style="border:none;padding:0;background:none;">
+            <span class="big-price">₹42,000</span>
+            <span class="unit">/ಕ್ವಿಂ</span>
+          </div>
+          <div class="trend trend-up">▲ +₹1,200 ನಿನ್ನೆಗಿಂತ</div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">🥥</div>
+            <div class="stat-val">₹12.5K</div>
+            <div class="stat-lbl">ತೆಂಗು</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🌧️</div>
+            <div class="stat-val">28°C</div>
+            <div class="stat-lbl">ಮಳೆ 3 ದಿನ</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🏛️</div>
+            <div class="stat-val">3 ಹೊಸ</div>
+            <div class="stat-lbl">ಯೋಜನೆ</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="sec-title">// ಇಂದಿನ ಸುದ್ದಿ</div>
+          <div class="sec-count">7 ಸುದ್ದಿ</div>
+        </div>
+
+        <div class="content-area">
+          <div class="digest-item di-price">
+            <div class="badge">💰 ಬೆಲೆ</div>
+            <div>ಮಂಗಳೂರು ಮಂಡಿಯಲ್ಲಿ ಅಡಿಕೆ ₹42,000/ಕ್ವಿಂ. ಪುತ್ತೂರು ₹41,200, ಸುಳ್ಯ ₹40,800.</div>
+            <span class="action">→ ಮಂಗಳೂರು ಮಂಡಿಯಲ್ಲಿ ಮಾರಾಟ ಲಾಭಕರ</span>
+          </div>
+
+          <div class="digest-item di-crop">
+            <div class="badge">🌿 ಬೆಳೆ ಎಚ್ಚರಿಕೆ</div>
+            <div>ಕೊಳೆ ರೋಗ ಎಚ್ಚರಿಕೆ: ಮಳೆಗಾಲದ ಮೊದಲು ಅಡಿಕೆ ತೋಟಕ್ಕೆ ಬೋರ್ಡೋ ಮಿಶ್ರಣ ಸಿಂಪಡಿಸಿ.</div>
+            <span class="action">→ 1% ಬೋರ್ಡೋ ಮಿಶ್ರಣ ಈ ವಾರ ಸಿಂಪಡಿಸಿ</span>
+          </div>
+
+          <div class="digest-item di-scheme">
+            <div class="badge">🏛️ ಯೋಜನೆ</div>
+            <div>ಪಿಎಂ ಕಿಸಾನ್ 19ನೇ ಕಂತು ₹2,000 ಶೀಘ್ರದಲ್ಲೇ ಬಿಡುಗಡೆ.</div>
+            <span class="action">→ ಇ-ಕೆವೈಸಿ ಪೂರ್ಣಗೊಳಿಸಿ, ಬ್ಯಾಂಕ್ ಖಾತೆ ಪರಿಶೀಲಿಸಿ</span>
+          </div>
+
+          <div class="digest-item di-weather">
+            <div class="badge">🌧️ ಹವಾಮಾನ</div>
+            <div>ಡಿಕೆ/ಉಡುಪಿಯಲ್ಲಿ ಮುಂದಿನ 3 ದಿನ ಮಧ್ಯಮ ಮಳೆ ಸಾಧ್ಯತೆ.</div>
+            <span class="action">→ ಕೊಯ್ಲು ಮುಂದೂಡಿ, ಸಿಂಪಡಣೆ ಬೇಡ</span>
+          </div>
+
+          <div class="digest-item di-crop">
+            <div class="badge">🌿 ಬೆಳೆ</div>
+            <div>ತೆಂಗಿನಕಾಯಿ: ಬೇಸಿಗೆಯಲ್ಲಿ ಬುಡಕ್ಕೆ ನೀರು ಹಾಕಿ, ಸಾವಯವ ಗೊಬ್ಬರ ಹಾಕಿ.</div>
+            <span class="action">→ ಪ್ರತಿ ಮರಕ್ಕೆ 40-50 ಲೀ ನೀರು ಹಾಕಿ</span>
+          </div>
+
+          <div class="digest-item di-general">
+            <div class="badge">📰 ಸಾಮಾನ್ಯ</div>
+            <div>ಕರ್ನಾಟಕ ಸರ್ಕಾರ ಸಾವಯವ ಕೃಷಿಗೆ ₹500 ಕೋಟಿ ಮೀಸಲಿಟ್ಟಿದೆ.</div>
+            <span class="action">→ ಸಾವಯವ ಪ್ರಮಾಣಪತ್ರಕ್ಕೆ ಅರ್ಜಿ ಸಲ್ಲಿಸಿ</span>
+          </div>
+        </div>
+
+        <div class="bottomnav">
+          <div class="navitem active"><div class="ni">⌂</div>ಮುಖಪುಟ</div>
+          <div class="navitem"><div class="ni">✦</div>ಕೇಳಿ</div>
+          <div class="navitem"><div class="ni">◎</div>ಬೆಲೆ</div>
+          <div class="navitem"><div class="ni">▤</div>ಯೋಜನೆ</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ ASK SCREEN ============ -->
+  <div>
+    <div class="screen-label">// Ask — Chat with KrishiMitra</div>
+    <div class="phone">
+      <div class="phone-scroll">
+        <div class="statusbar"><span>9:42 AM</span><span>4G 🔋 87%</span></div>
+
+        <div class="header">
+          <div class="logo" style="font-size:16px;">KRISHI<span>ಕೃಷಿ ಬಗ್ಗೆ ಏನಾದರೂ ಕೇಳಿ</span></div>
+        </div>
+
+        <div class="chat-area">
+          <div class="chat-bubble-bot">
+            🙏 ನಮಸ್ಕಾರ! ನಾನು ಕೃಷಿಮಿತ್ರ. ಕೃಷಿ ಬಗ್ಗೆ ಏನಾದರೂ ಕೇಳಿ — ಅಡಿಕೆ, ತೆಂಗು, ಯೋಜನೆ, ಬೆಲೆ, ಹವಾಮಾನ.
+          </div>
+
+          <div class="chat-bubble-user">
+            ಅಡಿಕೆಗೆ ಕೊಳೆ ರೋಗ ಬಂದಿದೆ, ಏನು ಮಾಡುವುದು?
+          </div>
+
+          <div class="chat-bubble-bot">
+            <strong style="color:#1B5E20;">ಕೊಳೆ ರೋಗ (Koleroga) ನಿಯಂತ್ರಣ:</strong><br><br>
+            1️⃣ <strong>ಬೋರ್ಡೋ ಮಿಶ್ರಣ 1%</strong> ಸಿಂಪಡಿಸಿ (ಜೂನ್-ಜುಲೈ)<br><br>
+            2️⃣ ರೋಗಗ್ರಸ್ತ ಗೊನೆಗಳನ್ನು <strong>ತೆಗೆದು ಸುಡಿ</strong><br><br>
+            3️⃣ ತೋಟದಲ್ಲಿ <strong>ಒಳಚರಂಡಿ</strong> ಸರಿಪಡಿಸಿ — ನೀರು ನಿಲ್ಲಬಾರದು<br><br>
+            4️⃣ <strong>ಕಾಪರ್ ಆಕ್ಸಿಕ್ಲೋರೈಡ್ 0.25%</strong> ಪರ್ಯಾಯ ಸಿಂಪಡಣೆ<br><br>
+            <span class="source-tag">📄 ಮೂಲ: CPCRI Kasaragod, Advisory 2025</span>
+          </div>
+
+          <div class="chat-bubble-user">
+            ರೈತ ಸಿರಿ ಯೋಜನೆ ಅರ್ಜಿ ಹೇಗೆ?
+          </div>
+
+          <div class="chat-bubble-bot">
+            <strong style="color:#1B5E20;">ರೈತ ಸಿರಿ ಯೋಜನೆ:</strong><br><br>
+            💰 ವಾರ್ಷಿಕ <strong>₹10,000</strong> ನೇರ ಬ್ಯಾಂಕ್ ಖಾತೆಗೆ<br><br>
+            📝 <strong>ಅರ್ಜಿ ಹೇಗೆ:</strong><br>
+            1. ನಿಮ್ಮ ಗ್ರಾಮ ಪಂಚಾಯತಿಗೆ ಭೇಟಿ ನೀಡಿ<br>
+            2. ಆಧಾರ್, ಭೂಮಿ ಪಹಣಿ, ಬ್ಯಾಂಕ್ ಪಾಸ್‌ಬುಕ್ ತನ್ನಿ<br>
+            3. ಅರ್ಜಿ ಭರ್ತಿ ಮಾಡಿ ಸಲ್ಲಿಸಿ<br><br>
+            <span class="source-tag">⏰ ಗಡುವು: ಮಾರ್ಚ್ 31, 2026</span>
+          </div>
+        </div>
+
+        <div class="chat-input-bar">
+          <div class="chat-input">ನಿಮ್ಮ ಪ್ರಶ್ನೆ ಬರೆಯಿರಿ...</div>
+          <div class="chat-send">➤</div>
+        </div>
+
+        <div class="bottomnav">
+          <div class="navitem"><div class="ni">⌂</div>ಮುಖಪುಟ</div>
+          <div class="navitem active"><div class="ni">✦</div>ಕೇಳಿ</div>
+          <div class="navitem"><div class="ni">◎</div>ಬೆಲೆ</div>
+          <div class="navitem"><div class="ni">▤</div>ಯೋಜನೆ</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ PRICES SCREEN ============ -->
+  <div>
+    <div class="screen-label">// Prices — Mandi Rates</div>
+    <div class="phone">
+      <div class="phone-scroll">
+        <div class="statusbar"><span>9:43 AM</span><span>4G 🔋 86%</span></div>
+
+        <div class="header">
+          <div class="logo" style="font-size:16px;">KRISHI<span>APMC ಮಂಡಿ ಬೆಲೆಗಳು • ದಕ / ಉಡುಪಿ</span></div>
+          <div class="date-pill">MAR 18</div>
+        </div>
+
+        <div class="content-area">
+          <div class="crop-chips">
+            <div class="chip active">🌴 ಅಡಿಕೆ</div>
+            <div class="chip">🥥 ತೆಂಗು</div>
+            <div class="chip">🌾 ಭತ್ತ</div>
+            <div class="chip">🌶️ ಮೆಣಸು</div>
+            <div class="chip">🥜 ಗೋಡಂಬಿ</div>
+          </div>
+
+          <div class="hero-price">
+            <div class="crop-label">ಅಡಿಕೆ — ಇಂದಿನ ಅತ್ಯುತ್ತಮ ಬೆಲೆ</div>
+            <div class="price-row" style="border:none;padding:0;background:none;">
+              <span class="big-price">₹42,000</span>
+              <span class="unit">/ಕ್ವಿಂ @ ಮಂಗಳೂರು</span>
+            </div>
+            <div class="trend trend-up">▲ +₹1,200 ನಿನ್ನೆಗಿಂತ • ಕನಿಷ್ಠ ಬೆಂಬಲ ಬೆಲೆ: ₹7,520</div>
+          </div>
+
+          <div class="section">
+            <div class="sec-title">// ಎಲ್ಲಾ APMC</div>
+            <div class="sec-count">6 ಮಂಡಿ</div>
+          </div>
+
+          <div class="price-table">
+            <div class="price-header-row">
+              <span>APMC</span>
+              <span>ಕನಿಷ್ಠ</span>
+              <span>ಗರಿಷ್ಠ</span>
+              <span>ಟ್ರೆಂಡ್</span>
+            </div>
+            <div class="price-row">
+              <span class="apmc-name">Mangalore <span class="best-tag">ಉತ್ತಮ</span></span>
+              <span>₹40.8K</span>
+              <span style="color:#1B5E20;font-weight:700;">₹42.0K</span>
+              <span style="color:#2E7D32;font-weight:700;">▲ +1.2K</span>
+            </div>
+            <div class="price-row">
+              <span class="apmc-name">Puttur</span>
+              <span>₹39.5K</span>
+              <span>₹41.2K</span>
+              <span style="color:#2E7D32;">▲ +800</span>
+            </div>
+            <div class="price-row">
+              <span class="apmc-name">Sullia</span>
+              <span>₹39.0K</span>
+              <span>₹40.8K</span>
+              <span style="color:#888;">— 0</span>
+            </div>
+            <div class="price-row">
+              <span class="apmc-name">Udupi</span>
+              <span>₹39.2K</span>
+              <span>₹41.0K</span>
+              <span style="color:#C62828;font-weight:700;">▼ -500</span>
+            </div>
+            <div class="price-row">
+              <span class="apmc-name">Kundapura</span>
+              <span>₹38.8K</span>
+              <span>₹40.5K</span>
+              <span style="color:#2E7D32;">▲ +300</span>
+            </div>
+            <div class="price-row">
+              <span class="apmc-name">Bantwal</span>
+              <span>₹39.0K</span>
+              <span>₹40.2K</span>
+              <span style="color:#C62828;">▼ -200</span>
+            </div>
+          </div>
+
+          <div class="reco-box">
+            <div class="reco-label">💡 ಶಿಫಾರಸು</div>
+            <div class="reco-text">ಮಂಗಳೂರು ಮಂಡಿಯಲ್ಲಿ ಅತ್ಯುತ್ತಮ ಬೆಲೆ. ಇಂದು ₹42,000/ಕ್ವಿಂ — ಮಾರಾಟ ಮಾಡಲು ಒಳ್ಳೆಯ ಸಮಯ.</div>
+          </div>
+        </div>
+
+        <div class="bottomnav">
+          <div class="navitem"><div class="ni">⌂</div>ಮುಖಪುಟ</div>
+          <div class="navitem"><div class="ni">✦</div>ಕೇಳಿ</div>
+          <div class="navitem active"><div class="ni">◎</div>ಬೆಲೆ</div>
+          <div class="navitem"><div class="ni">▤</div>ಯೋಜನೆ</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SCHEMES SCREEN ============ -->
+  <div>
+    <div class="screen-label">// ಯೋಜನೆ — Government Benefits</div>
+    <div class="phone">
+      <div class="phone-scroll">
+        <div class="statusbar"><span>9:44 AM</span><span>4G 🔋 86%</span></div>
+
+        <div class="header">
+          <div class="logo" style="font-size:16px;">KRISHI<span>ನಿಮಗೆ ಅರ್ಹ ಯೋಜನೆಗಳು</span></div>
+        </div>
+
+        <div class="content-area">
+          <div class="profile-bar">
+            <span class="pf-icon">👤</span>
+            <div>
+              <div class="pf-info">DK • Puttur • Arecanut, ತೆಂಗು • 2.5 acres</div>
+              <div class="pf-sub">ನಿಮ್ಮ ಪ್ರೊಫೈಲ್ → 5 ಯೋಜನೆ ಕಂಡುಬಂದಿವೆ</div>
+            </div>
+          </div>
+
+          <div class="scheme-card">
+            <div class="elig-tag">✓ ಅರ್ಹ</div>
+            <div class="scheme-name">ಪಿಎಂ ಕಿಸಾನ್ ಸಮ್ಮಾನ್ ನಿಧಿ</div>
+            <div class="scheme-benefit">₹6,000<span>/ವರ್ಷ</span></div>
+            <div class="scheme-detail">
+              ₹2,000 × 3 ಕಂತುಗಳಲ್ಲಿ ನೇರ ಬ್ಯಾಂಕ್ ಖಾತೆಗೆ ಜಮಾ<br>
+              📄 ಆಧಾರ್ + ಭೂಮಿ ಪಹಣಿ ಅಗತ್ಯ
+            </div>
+            <div class="scheme-btn">ಅರ್ಜಿ ಸಲ್ಲಿಸಿ →</div>
+          </div>
+
+          <div class="scheme-card">
+            <div class="elig-tag">✓ ಅರ್ಹ</div>
+            <div class="scheme-name">ರೈತ ಸಿರಿ ಯೋಜನೆ</div>
+            <div class="scheme-benefit">₹10,000<span>/ವರ್ಷ</span></div>
+            <div class="scheme-detail">
+              ಕರ್ನಾಟಕ ಸರ್ಕಾರದ ಯೋಜನೆ. ಎಲ್ಲಾ ರೈತರಿಗೆ ವಾರ್ಷಿಕ ₹10,000<br>
+              📄 ಗ್ರಾಮ ಪಂಚಾಯತಿಯಲ್ಲಿ ಅರ್ಜಿ<br>
+              ⏰ ಗಡುವು: ಮಾರ್ಚ್ 31, 2026
+            </div>
+            <div class="scheme-btn">ಅರ್ಜಿ ಸಲ್ಲಿಸಿ →</div>
+          </div>
+
+          <div class="scheme-card">
+            <div class="elig-tag">✓ ಅರ್ಹ</div>
+            <div class="scheme-name">ಕೃಷಿ ಭಾಗ್ಯ — ಕೃಷಿ ಹೊಂಡ</div>
+            <div class="scheme-benefit">₹75,000<span> ಸಹಾಯಧನ</span></div>
+            <div class="scheme-detail">
+              ಕೃಷಿ ಹೊಂಡ ನಿರ್ಮಾಣಕ್ಕೆ 80% ಸಹಾಯಧನ<br>
+              📄 5 ಎಕರೆ ಒಳಗಿನ ಹಿಡುವಳಿದಾರರಿಗೆ<br>
+              📞 ಕೃಷಿ ಇಲಾಖೆ: 1800-425-1552
+            </div>
+            <div class="scheme-btn">ಅರ್ಜಿ ಸಲ್ಲಿಸಿ →</div>
+          </div>
+
+          <div class="scheme-card">
+            <div class="elig-tag">✓ ಅರ್ಹ</div>
+            <div class="scheme-name">PMFBY — ಬೆಳೆ ವಿಮೆ</div>
+            <div class="scheme-benefit">₹2<span>/ತಿಂಗಳು ಪ್ರೀಮಿಯಂ</span></div>
+            <div class="scheme-detail">
+              ಪ್ರವಾಹ, ಬರ, ಕೀಟ ಹಾನಿಗೆ ಬೆಳೆ ವಿಮೆ<br>
+              📄 ಬ್ಯಾಂಕ್ ಶಾಖೆಯಲ್ಲಿ ನೋಂದಣಿ<br>
+              ⏰ ಖಾರಿಫ್ ಸೀಸನ್‌ಗೆ ಜೂನ್ ಒಳಗೆ
+            </div>
+            <div class="scheme-btn">ಅರ್ಜಿ ಸಲ್ಲಿಸಿ →</div>
+          </div>
+        </div>
+
+        <div class="bottomnav">
+          <div class="navitem"><div class="ni">⌂</div>ಮುಖಪುಟ</div>
+          <div class="navitem"><div class="ni">✦</div>ಕೇಳಿ</div>
+          <div class="navitem"><div class="ni">◎</div>ಬೆಲೆ</div>
+          <div class="navitem active"><div class="ni">▤</div>ಯೋಜನೆ</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div style="text-align:center; margin-top:50px; color:#666; font-size:12px;">
+  KrishiMitra v2 — Light theme, high contrast, sunlight readable
+</div>
+
+</body>
+</html>

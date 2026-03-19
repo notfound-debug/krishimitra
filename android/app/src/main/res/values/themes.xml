@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base theme — Compose handles actual theming, this is just the shell -->
+    <style name="Theme.KrishiMitra" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>

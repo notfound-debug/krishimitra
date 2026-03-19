@@ -1,0 +1,13 @@
+<!-- Kannada strings — Android auto-picks this for Kannada-language devices -->
+<resources>
+    <string name="app_name">ಕೃಷಿಮಿತ್ರ</string>
+    <string name="tab_home">ಮುಖಪುಟ</string>
+    <string name="tab_chat">ಕೇಳಿ</string>
+    <string name="tab_prices">ಬೆಲೆಗಳು</string>
+    <string name="tab_schemes">ಯೋಜನೆಗಳು</string>
+    <string name="digest_title">ಇಂದಿನ ಕೃಷಿ ಸುದ್ದಿ</string>
+    <string name="loading">ಲೋಡ್ ಆಗುತ್ತಿದೆ…</string>
+    <string name="offline_badge">ಕೊನೆಯ ನವೀಕರಣ: %1$s</string>
+    <string name="no_digest">ಇನ್ನೂ ಸುದ್ದಿ ಲಭ್ಯವಿಲ್ಲ. ರಿಫ್ರೆಶ್ ಮಾಡಲು ಕೆಳಕ್ಕೆ ಎಳೆಯಿರಿ.</string>
+    <string name="error_network">ಇಂಟರ್ನೆಟ್ ಸಂಪರ್ಕವಿಲ್ಲ. ಸಂಗ್ರಹಿಸಿದ ಮಾಹಿತಿ ತೋರಿಸಲಾಗುತ್ತಿದೆ.</string>
+</resources>

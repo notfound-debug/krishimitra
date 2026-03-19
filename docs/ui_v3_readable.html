@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KrishiMitra v3 — Elder-Friendly Readable UI</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Kannada:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #111;
+    font-family: 'DM Sans', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    min-height: 100vh;
+  }
+  h1 { color: #2E7D32; font-size: 20px; margin-bottom: 4px; text-align: center; }
+  .subtitle { color: #888; font-size: 12px; margin-bottom: 30px; text-align: center; }
+  .screens { display: flex; gap: 30px; flex-wrap: wrap; justify-content: center; }
+  .screen-label {
+    text-align: center; font-size: 11px; color: #aaa;
+    letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px;
+  }
+
+  /* Realistic phone: 360x800 (standard budget Android) */
+  .phone {
+    width: 360px;
+    height: 780px;
+    background: #FAFAFA;
+    border-radius: 28px;
+    border: 2px solid #ccc;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+  }
+  .phone-scroll {
+    width: 100%; height: 100%;
+    overflow-y: auto;
+    -ms-overflow-style: none; scrollbar-width: none;
+  }
+  .phone-scroll::-webkit-scrollbar { display: none; }
+
+  /* Status bar */
+  .statusbar {
+    height: 28px; background: #1B5E20;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 20px; font-size: 11px; color: #fff;
+    position: sticky; top: 0; z-index: 20;
+  }
+
+  /* Header — bigger, clearer */
+  .header {
+    background: #fff; padding: 14px 18px;
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1.5px solid #E0E0E0;
+  }
+  .header .logo { font-size: 20px; font-weight: 700; color: #1B5E20; }
+  .header .logo span {
+    font-size: 12px; font-weight: 500; color: #666; display: block;
+    font-family: 'Noto Sans Kannada', sans-serif;
+  }
+  .lang-toggle {
+    display: flex; border-radius: 20px; border: 2px solid #1B5E20; overflow: hidden;
+  }
+  .lang-btn {
+    padding: 5px 12px; font-size: 13px; font-weight: 700; cursor: pointer;
+  }
+  .lang-btn.active { background: #1B5E20; color: #fff; }
+  .lang-btn.inactive { background: #fff; color: #1B5E20; }
+
+  /* Hero price card — balanced sizes */
+  .hero-price {
+    margin: 12px 14px; padding: 16px 18px;
+    background: #1B5E20; border-radius: 16px;
+    position: relative; overflow: hidden;
+  }
+  .hero-price .crop-label {
+    font-size: 13px; color: rgba(255,255,255,0.8);
+    font-family: 'Noto Sans Kannada', sans-serif; font-weight: 500;
+  }
+  .hero-price .price-row { display: flex; align-items: baseline; gap: 6px; margin-top: 4px; }
+  .hero-price .big-price { font-size: 26px; font-weight: 700; color: #fff; }
+  .hero-price .unit { font-size: 13px; color: rgba(255,255,255,0.7); }
+  .hero-price .trend {
+    display: inline-block; margin-top: 6px; font-size: 12px; color: #fff;
+    background: rgba(255,255,255,0.15); padding: 3px 10px; border-radius: 6px;
+  }
+
+  /* Stats grid — bigger text */
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; padding: 0 14px; margin-bottom: 14px; }
+  .stat-card {
+    background: #fff; border: 1.5px solid #E0E0E0; border-radius: 12px;
+    padding: 10px 6px; text-align: center;
+  }
+  .stat-card .emoji { font-size: 20px; }
+  .stat-card .val { font-size: 16px; font-weight: 700; color: #1B5E20; margin-top: 2px; }
+  .stat-card .lbl { font-size: 12px; color: #666; font-family: 'Noto Sans Kannada', sans-serif; }
+
+  /* Section header */
+  .section {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 16px; margin: 4px 0 10px;
+  }
+  .section .title { font-size: 13px; font-weight: 700; color: #1B5E20; }
+  .section .count { font-size: 11px; color: #666; background: #F0F0F0; padding: 2px 8px; border-radius: 10px; }
+
+  /* Digest news cards — BIGGER TEXT */
+  .digest-item {
+    background: #fff; margin: 0 14px 8px; padding: 14px 16px;
+    border-radius: 12px; border-left: 4px solid;
+    border-top: 1px solid #F0F0F0; border-right: 1px solid #F0F0F0; border-bottom: 1px solid #F0F0F0;
+    font-family: 'Noto Sans Kannada', 'DM Sans', sans-serif;
+  }
+  .digest-item .badge {
+    display: inline-block; font-size: 12px; font-weight: 700;
+    padding: 3px 10px; border-radius: 4px; margin-bottom: 6px;
+  }
+  .digest-item .news-text { font-size: 16px; color: #222; line-height: 1.6; }
+  .digest-item .action { font-size: 15px; color: #1B5E20; font-weight: 600; margin-top: 6px; }
+  .digest-item .source-link { font-size: 12px; color: #888; margin-top: 8px; cursor: pointer; }
+  .digest-item .source-link:hover { color: #1B5E20; }
+
+  .di-price { border-left-color: #E65100; }
+  .di-price .badge { background: #FFF3E0; color: #E65100; }
+  .di-crop { border-left-color: #2E7D32; }
+  .di-crop .badge { background: #E8F5E9; color: #2E7D32; }
+  .di-scheme { border-left-color: #1565C0; }
+  .di-scheme .badge { background: #E3F2FD; color: #1565C0; }
+  .di-weather { border-left-color: #00838F; }
+  .di-weather .badge { background: #E0F7FA; color: #00838F; }
+  .di-impact { border-left-color: #FF6F00; }
+  .di-impact .badge { background: #FFF8E1; color: #FF6F00; }
+
+  /* Bottom nav — softer dark green, readable for elders */
+  .bottomnav {
+    position: sticky; bottom: 0; left: 0; right: 0; height: 70px;
+    background: #1B3A1E; display: flex; align-items: center;
+    justify-content: space-around; z-index: 20;
+    border-top: 1px solid rgba(255,255,255,0.15);
+  }
+  .navitem {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    font-family: 'Noto Sans Kannada', sans-serif;
+    cursor: pointer; padding: 4px 10px;
+  }
+  .navitem .ni {
+    width: 36px; height: 36px; display: flex; align-items: center;
+    justify-content: center; border-radius: 10px; font-size: 22px;
+  }
+  .navitem .nl { font-size: 13px; font-weight: 600; }
+  /* Inactive — clearly visible white-green */
+  .navitem.inactive .ni { color: #A5D6A7; }
+  .navitem.inactive .nl { color: #A5D6A7; }
+  /* Active — bright lime with background */
+  .navitem.active .ni { background: rgba(198,255,0,0.2); color: #C6FF00; }
+  .navitem.active .nl { color: #C6FF00; }
+
+  .content-area { padding-bottom: 76px; }
+
+  /* ===== CHAT SCREEN ===== */
+  .chat-bubble-bot {
+    background: #fff; border: 1.5px solid #E0E0E0;
+    border-radius: 16px 16px 16px 4px; padding: 14px 16px;
+    margin-bottom: 8px; max-width: 88%;
+    font-family: 'Noto Sans Kannada', 'DM Sans', sans-serif;
+    font-size: 16px; color: #222; line-height: 1.6;
+  }
+  .chat-bubble-user {
+    background: #1B5E20; border-radius: 16px 16px 4px 16px;
+    padding: 12px 16px; margin-bottom: 8px; margin-left: auto;
+    max-width: 85%; text-align: right;
+    font-family: 'Noto Sans Kannada', 'DM Sans', sans-serif;
+    font-size: 16px; color: #fff; line-height: 1.5;
+  }
+  .chat-source { font-size: 10px; color: #888; margin-top: 4px; }
+  .suggestion-chip {
+    display: block; margin-bottom: 6px;
+    background: #E8F5E9; border-radius: 8px; padding: 10px 14px;
+    font-family: 'Noto Sans Kannada', sans-serif;
+    font-size: 15px; color: #1B5E20; font-weight: 500; cursor: pointer;
+  }
+  .chat-input-bar {
+    position: absolute; bottom: 68px; left: 0; right: 0;
+    padding: 10px 14px; background: #fff;
+    border-top: 1px solid #E0E0E0; display: flex; gap: 8px;
+  }
+  .chat-input {
+    flex: 1; background: #FAFAFA; border: 1.5px solid #E0E0E0;
+    border-radius: 12px; padding: 11px 14px;
+    font-family: 'Noto Sans Kannada', sans-serif; font-size: 14px; color: #999;
+  }
+  .chat-send {
+    width: 44px; height: 44px; background: #1B5E20; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; color: #fff;
+  }
+
+  /* ===== ONBOARDING SWIPE ===== */
+  .onboard-card {
+    width: 360px; height: 780px; border-radius: 28px; border: 2px solid #ccc;
+    overflow: hidden; background: #fff; position: relative;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+  }
+  .onboard-inner { padding: 40px 24px; text-align: center; }
+  .onboard-emoji { font-size: 64px; margin-bottom: 20px; }
+  .onboard-title {
+    font-family: 'Noto Sans Kannada', sans-serif;
+    font-size: 22px; font-weight: 700; color: #1B5E20; margin-bottom: 12px;
+  }
+  .onboard-desc {
+    font-family: 'Noto Sans Kannada', sans-serif;
+    font-size: 16px; color: #444; line-height: 1.6; margin-bottom: 30px;
+  }
+  .onboard-btn {
+    display: inline-block; background: #1B5E20; color: #fff;
+    padding: 14px 40px; border-radius: 12px;
+    font-size: 16px; font-weight: 700;
+    font-family: 'Noto Sans Kannada', sans-serif;
+  }
+  .onboard-dots {
+    position: absolute; bottom: 40px; left: 0; right: 0;
+    display: flex; justify-content: center; gap: 8px;
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #E0E0E0; }
+  .dot.active { background: #1B5E20; }
+
+  /* Profile form */
+  .profile-form { padding: 20px 24px; text-align: left; }
+  .form-label {
+    font-family: 'Noto Sans Kannada', sans-serif;
+    font-size: 14px; font-weight: 600; color: #333; margin-bottom: 6px; margin-top: 16px;
+  }
+  .form-select {
+    width: 100%; padding: 12px 14px; border: 1.5px solid #E0E0E0;
+    border-radius: 10px; font-size: 15px; background: #FAFAFA;
+    font-family: 'Noto Sans Kannada', sans-serif;
+  }
+  .crop-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .crop-chip {
+    padding: 8px 14px; border-radius: 20px; font-size: 14px;
+    font-family: 'Noto Sans Kannada', sans-serif; font-weight: 500;
+    border: 1.5px solid #E0E0E0; background: #fff; color: #666;
+  }
+  .crop-chip.selected { background: #1B5E20; color: #fff; border-color: #1B5E20; }
+</style>
+</head>
+<body>
+
+<h1>KrishiMitra v3 — ಓದಲು ಸುಲಭ (Easy to Read)</h1>
+<p class="subtitle">Bigger fonts, readable nav, balanced hero card. Compare with v2.</p>
+
+<div class="screens">
+
+  <!-- ===== ONBOARDING 1 ===== -->
+  <div>
+    <div class="screen-label">Onboarding — Welcome</div>
+    <div class="onboard-card">
+      <div class="statusbar"><span>9:41</span><span>4G 🔋</span></div>
+      <div class="onboard-inner">
+        <div class="onboard-emoji">🌾</div>
+        <div class="onboard-title">ಕೃಷಿಮಿತ್ರಗೆ ಸ್ವಾಗತ!</div>
+        <div class="onboard-desc">
+          ನಿಮ್ಮ AI ಕೃಷಿ ಸಹಾಯಕ. ಪ್ರತಿದಿನ ಕೃಷಿ ಸುದ್ದಿ, ಮಂಡಿ ಬೆಲೆ, ಸರ್ಕಾರಿ ಯೋಜನೆ, ಮತ್ತು ನಿಮ್ಮ ಪ್ರಶ್ನೆಗಳಿಗೆ ಉತ್ತರ — ಕನ್ನಡದಲ್ಲಿ.
+        </div>
+        <div class="onboard-btn">ಮುಂದೆ →</div>
+      </div>
+      <div class="onboard-dots">
+        <div class="dot active"></div><div class="dot"></div><div class="dot"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ONBOARDING 2 — Profile Setup ===== -->
+  <div>
+    <div class="screen-label">Onboarding — Profile Setup</div>
+    <div class="onboard-card">
+      <div class="statusbar"><span>9:41</span><span>4G 🔋</span></div>
+      <div style="padding: 20px 24px;">
+        <div style="font-family:'Noto Sans Kannada',sans-serif; font-size:20px; font-weight:700; color:#1B5E20; margin-bottom: 4px;">ನಿಮ್ಮ ವಿವರ ತುಂಬಿ</div>
+        <div style="font-size:13px; color:#888; margin-bottom: 10px; font-family:'Noto Sans Kannada',sans-serif;">ನಿಮಗೆ ಸರಿಯಾದ ಮಾಹಿತಿ ಕೊಡಲು ಇದು ಸಹಾಯ ಮಾಡುತ್ತದೆ</div>
+
+        <div class="form-label">📍 ನಿಮ್ಮ ಜಿಲ್ಲೆ</div>
+        <div class="form-select">ದಕ್ಷಿಣ ಕನ್ನಡ ▾</div>
+
+        <div class="form-label">📍 ನಿಮ್ಮ ತಾಲೂಕು</div>
+        <div class="form-select">ಪುತ್ತೂರು ▾</div>
+
+        <div class="form-label">🌿 ನೀವು ಯಾವ ಬೆಳೆ ಬೆಳೆಯುತ್ತೀರಿ?</div>
+        <div class="crop-grid">
+          <div class="crop-chip selected">🌴 ಅಡಿಕೆ</div>
+          <div class="crop-chip selected">🥥 ತೆಂಗು</div>
+          <div class="crop-chip">🌾 ಭತ್ತ</div>
+          <div class="crop-chip selected">🌶️ ಮೆಣಸು</div>
+          <div class="crop-chip">🥜 ಗೋಡಂಬಿ</div>
+          <div class="crop-chip">🍫 ಕೋಕೋ</div>
+          <div class="crop-chip">🌳 ರಬ್ಬರ್</div>
+        </div>
+
+        <div class="form-label">📐 ನಿಮ್ಮ ಭೂಮಿ (ಎಕರೆ)</div>
+        <div class="form-select">2.5</div>
+
+        <div class="form-label">🗣️ ಭಾಷೆ</div>
+        <div style="display:flex; gap:8px; margin-top:6px;">
+          <div class="crop-chip selected">ಕನ್ನಡ</div>
+          <div class="crop-chip">English</div>
+        </div>
+
+        <div style="margin-top: 24px; text-align: center;">
+          <div class="onboard-btn">ಸಿದ್ಧ — ಆರಂಭಿಸೋಣ! ✓</div>
+        </div>
+      </div>
+      <div class="onboard-dots">
+        <div class="dot"></div><div class="dot"></div><div class="dot active"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== HOME SCREEN (READABLE) ===== -->
+  <div>
+    <div class="screen-label">Home — ಓದಲು ಸುಲಭ (Readable)</div>
+    <div class="phone">
+      <div class="phone-scroll">
+        <div class="statusbar"><span>9:41</span><span>4G 🔋 87%</span></div>
+
+        <div class="header">
+          <div class="logo">KRISHI<span>AI ಕೃಷಿ ಸಹಾಯಕ • ಪುತ್ತೂರು, ದಕ</span></div>
+          <div class="lang-toggle">
+            <div class="lang-btn active">ಕ</div>
+            <div class="lang-btn inactive">En</div>
+          </div>
+        </div>
+
+        <div class="hero-price">
+          <div class="crop-label">🌴 ಅಡಿಕೆ • ಮಂಗಳೂರು APMC</div>
+          <div class="price-row">
+            <span class="big-price">₹42,000</span>
+            <span class="unit">/ಕ್ವಿಂ</span>
+          </div>
+          <div class="trend">▲ +₹1,200 ನಿನ್ನೆಗಿಂತ</div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card"><div class="emoji">🥥</div><div class="val">₹12.5K</div><div class="lbl">ತೆಂಗು</div></div>
+          <div class="stat-card"><div class="emoji">🌧️</div><div class="val">28°C</div><div class="lbl">ಮಳೆ 3 ದಿನ</div></div>
+          <div class="stat-card"><div class="emoji">🏛️</div><div class="val">3 ಹೊಸ</div><div class="lbl">ಯೋಜನೆ</div></div>
+        </div>
+
+        <div class="section">
+          <div class="title">// ಇಂದಿನ ಸುದ್ದಿ</div>
+          <div class="count">7 ಸುದ್ದಿ</div>
+        </div>
+
+        <div class="content-area">
+          <div class="digest-item di-price">
+            <div class="badge">💰 ಬೆಲೆ</div>
+            <div class="news-text">ಮಂಗಳೂರು ಮಂಡಿಯಲ್ಲಿ ಅಡಿಕೆ ₹42,000/ಕ್ವಿಂ. ಪುತ್ತೂರು ₹41,200, ಸುಳ್ಯ ₹40,800.</div>
+            <div class="action">→ ಮಂಗಳೂರು ಮಂಡಿಯಲ್ಲಿ ಮಾರಾಟ ಲಾಭಕರ</div>
+            <div class="source-link">📄 Krishi Jagran →</div>
+          </div>
+
+          <div class="digest-item di-crop">
+            <div class="badge">🌿 ಬೆಳೆ ಎಚ್ಚರಿಕೆ</div>
+            <div class="news-text">ಕೊಳೆ ರೋಗ ಎಚ್ಚರಿಕೆ: ಮಳೆಗಾಲದ ಮೊದಲು ಅಡಿಕೆ ತೋಟಕ್ಕೆ ಬೋರ್ಡೋ ಮಿಶ್ರಣ ಸಿಂಪಡಿಸಿ.</div>
+            <div class="action">→ 1% ಬೋರ್ಡೋ ಮಿಶ್ರಣ ಈ ವಾರ ಸಿಂಪಡಿಸಿ</div>
+            <div class="source-link">📄 CPCRI Advisory →</div>
+          </div>
+
+          <div class="digest-item di-scheme">
+            <div class="badge">🏛️ ಯೋಜನೆ</div>
+            <div class="news-text">ಪಿಎಂ ಕಿಸಾನ್ 19ನೇ ಕಂತು ₹2,000 ಶೀಘ್ರದಲ್ಲೇ ಬಿಡುಗಡೆ.</div>
+            <div class="action">→ ಇ-ಕೆವೈಸಿ ಪೂರ್ಣಗೊಳಿಸಿ, ಬ್ಯಾಂಕ್ ಖಾತೆ ಪರಿಶೀಲಿಸಿ</div>
+            <div class="source-link">📄 Rural Voice →</div>
+          </div>
+
+          <div class="digest-item di-impact">
+            <div class="badge">⚠️ ಪ್ರಭಾವ</div>
+            <div class="news-text">ಡೀಸೆಲ್ ₹3 ಹೆಚ್ಚಳ — ಸಾಗಾಟ ವೆಚ್ಚ ಹೆಚ್ಚಾಗಬಹುದು.</div>
+            <div class="action">→ ಪಂಪ್/ಸಾಗಾಟ ₹200-300/ತಿಂಗಳು ಹೆಚ್ಚು — ಬೇಗ ಡೀಸೆಲ್ ತುಂಬಿಸಿ</div>
+            <div class="source-link">📄 Deccan Herald →</div>
+          </div>
+
+          <div class="digest-item di-weather">
+            <div class="badge">🌧️ ಹವಾಮಾನ</div>
+            <div class="news-text">ಡಿಕೆ/ಉಡುಪಿಯಲ್ಲಿ ಮುಂದಿನ 3 ದಿನ ಮಧ್ಯಮ ಮಳೆ ಸಾಧ್ಯತೆ.</div>
+            <div class="action">→ ಕೊಯ್ಲು ಮುಂದೂಡಿ, ಸಿಂಪಡಣೆ ಬೇಡ</div>
+            <div class="source-link">📄 Prajavani →</div>
+          </div>
+        </div>
+
+        <div class="bottomnav">
+          <div class="navitem active"><div class="ni">⌂</div><div class="nl">ಮುಖಪುಟ</div></div>
+          <div class="navitem inactive"><div class="ni">✦</div><div class="nl">ಕೇಳಿ</div></div>
+          <div class="navitem inactive"><div class="ni">◎</div><div class="nl">ಬೆಲೆ</div></div>
+          <div class="navitem inactive"><div class="ni">▤</div><div class="nl">ಯೋಜನೆ</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CHAT SCREEN (READABLE) ===== -->
+  <div>
+    <div class="screen-label">Ask — Chat (Readable)</div>
+    <div class="phone">
+      <div class="phone-scroll">
+        <div class="statusbar"><span>9:42</span><span>4G 🔋</span></div>
+
+        <div class="header">
+          <div class="logo" style="font-size:18px;">KRISHI<span>ಕೃಷಿಮಿತ್ರನನ್ನು ಕೇಳಿ</span></div>
+        </div>
+
+        <div style="padding: 12px 14px 120px;">
+          <!-- Welcome -->
+          <div class="chat-bubble-bot">
+            🙏 ನಮಸ್ಕಾರ! ನಾನು ಕೃಷಿಮಿತ್ರ. ಕೃಷಿ ಬಗ್ಗೆ ಏನಾದರೂ ಕೇಳಿ.
+          </div>
+
+          <div style="margin-bottom: 10px;">
+            <div class="suggestion-chip">💬 ಕೊಳೆ ರೋಗ ತಡೆಗಟ್ಟುವುದು ಹೇಗೆ?</div>
+            <div class="suggestion-chip">💬 PM KISAN ಅರ್ಜಿ ಹೇಗೆ?</div>
+            <div class="suggestion-chip">💬 ಅಡಿಕೆ ಜೊತೆ ಏನು ಬೆಳೆಯಬಹುದು?</div>
+          </div>
+
+          <div class="chat-bubble-user">
+            ಕೊಳೆ ರೋಗ ತಡೆಗಟ್ಟುವುದು ಹೇಗೆ?
+          </div>
+
+          <div class="chat-bubble-bot">
+            <strong style="color:#1B5E20;">ಕೊಳೆ ರೋಗ ನಿಯಂತ್ರಣ:</strong><br><br>
+            1️⃣ ಮೇ-ಜೂನ್‌ನಲ್ಲಿ <strong>1% ಬೋರ್ಡೋ ಮಿಶ್ರಣ</strong> ಸಿಂಪಡಿಸಿ<br><br>
+            2️⃣ ರೋಗಗ್ರಸ್ತ ಕಾಯಿಗಳನ್ನು <strong>ತೆಗೆದು ಸುಡಿ</strong><br><br>
+            3️⃣ ಒಳಚರಂಡಿ ಸರಿಪಡಿಸಿ — ನೀರು ನಿಲ್ಲಬಾರದು<br><br>
+            4️⃣ ಪರ್ಯಾಯ: <strong>ಕಾಪರ್ ಆಕ್ಸಿಕ್ಲೋರೈಡ್ 0.25%</strong><br><br>
+            ವೆಚ್ಚ: ~₹50/ಮರ/ಸೀಸನ್
+            <div class="chat-source">📄 CPCRI Kasaragod / UAS Dharwad</div>
+          </div>
+        </div>
+
+        <div class="chat-input-bar">
+          <div class="chat-input">ನಿಮ್ಮ ಪ್ರಶ್ನೆ ಬರೆಯಿರಿ...</div>
+          <div class="chat-send">➤</div>
+        </div>
+
+        <div class="bottomnav">
+          <div class="navitem inactive"><div class="ni">⌂</div><div class="nl">ಮುಖಪುಟ</div></div>
+          <div class="navitem active"><div class="ni">✦</div><div class="nl">ಕೇಳಿ</div></div>
+          <div class="navitem inactive"><div class="ni">◎</div><div class="nl">ಬೆಲೆ</div></div>
+          <div class="navitem inactive"><div class="ni">▤</div><div class="nl">ಯೋಜನೆ</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div style="text-align:center; margin-top: 30px; color:#666; font-size: 12px;">
+  <strong>v3.1 Changes:</strong> Body text 16px, action 15px, badge 12px, chat 16px.
+  Nav bar: softer green (#1B3A1E not black), inactive items bright (#A5D6A7), icons 20px, labels 12px.
+  Stat labels 12px. Source links 12px.
+</div>
+
+</body>
+</html>

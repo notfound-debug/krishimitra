@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KrishiMitra UI Design Options</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Kannada:wght@400;600;700&family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;700&family=Space+Mono:wght@400;700&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a0a;
+    color: #fff;
+    font-family: 'DM Sans', sans-serif;
+    padding: 40px 20px;
+  }
+  h1 {
+    text-align: center;
+    font-size: 28px;
+    margin-bottom: 8px;
+    font-family: 'Outfit', sans-serif;
+  }
+  .subtitle {
+    text-align: center;
+    color: #888;
+    margin-bottom: 50px;
+    font-size: 14px;
+  }
+  .options-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: 40px;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+  .option-wrapper {
+    text-align: center;
+  }
+  .option-label {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    font-family: 'Outfit', sans-serif;
+  }
+  .option-desc {
+    color: #999;
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+
+  /* Phone frame */
+  .phone {
+    width: 360px;
+    height: 720px;
+    border-radius: 36px;
+    overflow: hidden;
+    margin: 0 auto;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .phone-inner {
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    position: relative;
+  }
+  .phone-inner::-webkit-scrollbar { display: none; }
+
+  /* Status bar */
+  .statusbar {
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  /* Bottom nav common */
+  .bottomnav {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    font-size: 10px;
+    font-weight: 600;
+    z-index: 10;
+  }
+  .navitem {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    opacity: 0.5;
+  }
+  .navitem.active { opacity: 1; }
+  .navicon {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+  }
+
+  /* ========================================
+     OPTION A: Earthy Harvest
+     ======================================== */
+  .phone-a {
+    background: #F5F0E8;
+    border: 3px solid #2E7D32;
+  }
+  .phone-a .statusbar { background: #1B5E20; color: #fff; }
+  .phone-a .header-a {
+    background: linear-gradient(135deg, #1B5E20, #2E7D32);
+    padding: 20px;
+    color: #fff;
+  }
+  .phone-a .header-a h2 {
+    font-family: 'Noto Sans Kannada', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+  }
+  .phone-a .header-a .date {
+    font-size: 12px;
+    opacity: 0.8;
+    margin-top: 2px;
+  }
+  .phone-a .greeting {
+    background: linear-gradient(135deg, #F57F17, #FF8F00);
+    margin: 16px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    color: #fff;
+    font-family: 'Noto Sans Kannada', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .phone-a .digest-card {
+    background: #fff;
+    margin: 0 16px 10px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border-left: 4px solid;
+    font-family: 'Noto Sans Kannada', 'DM Sans', sans-serif;
+    font-size: 13px;
+    color: #333;
+    line-height: 1.6;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .phone-a .digest-card .tag {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    letter-spacing: 0.5px;
+  }
+  .phone-a .dc-price { border-color: #F57F17; }
+  .phone-a .dc-price .tag { color: #F57F17; }
+  .phone-a .dc-crop { border-color: #2E7D32; }
+  .phone-a .dc-crop .tag { color: #2E7D32; }
+  .phone-a .dc-scheme { border-color: #1565C0; }
+  .phone-a .dc-scheme .tag { color: #1565C0; }
+  .phone-a .dc-weather { border-color: #00838F; }
+  .phone-a .dc-weather .tag { color: #00838F; }
+  .phone-a .bottomnav {
+    background: #1B5E20;
+    color: #fff;
+    border-top: none;
+  }
+  .phone-a .navitem.active .navicon { background: rgba(255,255,255,0.2); }
+
+  /* ========================================
+     OPTION B: Clean Government Portal
+     ======================================== */
+  .phone-b {
+    background: #F8F9FA;
+    border: 3px solid #1565C0;
+  }
+  .phone-b .statusbar { background: #0D47A1; color: #fff; }
+  .phone-b .header-b {
+    background: #fff;
+    padding: 18px 20px;
+    border-bottom: 2px solid #E3F2FD;
+  }
+  .phone-b .header-b h2 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: #0D47A1;
+  }
+  .phone-b .header-b .date {
+    font-size: 11px;
+    color: #666;
+    margin-top: 2px;
+  }
+  .phone-b .quick-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 14px 16px;
+  }
+  .phone-b .stat-box {
+    background: #fff;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #E0E0E0;
+    text-align: center;
+  }
+  .phone-b .stat-box .num {
+    font-size: 20px;
+    font-weight: 700;
+    color: #0D47A1;
+  }
+  .phone-b .stat-box .lbl {
+    font-size: 10px;
+    color: #888;
+    margin-top: 2px;
+  }
+  .phone-b .section-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #333;
+    padding: 0 16px;
+    margin: 10px 0 8px;
+    font-family: 'Outfit', sans-serif;
+  }
+  .phone-b .news-item {
+    background: #fff;
+    margin: 0 16px 8px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid #E8E8E8;
+    font-size: 12.5px;
+    color: #333;
+    font-family: 'Noto Sans Kannada', 'DM Sans', sans-serif;
+    line-height: 1.5;
+  }
+  .phone-b .news-item .badge {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-bottom: 6px;
+    color: #fff;
+  }
+  .phone-b .badge-price { background: #FF6F00; }
+  .phone-b .badge-crop { background: #2E7D32; }
+  .phone-b .badge-scheme { background: #1565C0; }
+  .phone-b .badge-weather { background: #00838F; }
+  .phone-b .bottomnav {
+    background: #fff;
+    border-top: 2px solid #E3F2FD;
+    color: #666;
+  }
+  .phone-b .navitem.active { color: #0D47A1; }
+  .phone-b .navitem.active .navicon { background: #E3F2FD; color: #0D47A1; }
+
+  /* ========================================
+     OPTION C: Warm Mitti (Soil)
+     ======================================== */
+  .phone-c {
+    background: #FFF8E1;
+    border: 3px solid #BF360C;
+  }
+  .phone-c .statusbar { background: #4E342E; color: #FFCCBC; }
+  .phone-c .header-c {
+    background: linear-gradient(135deg, #4E342E, #6D4C41);
+    padding: 22px 20px;
+    color: #FFF8E1;
+    position: relative;
+    overflow: hidden;
+  }
+  .phone-c .header-c::after {
+    content: '';
+    position: absolute;
+    top: -20px;
+    right: -20px;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.05);
+  }
+  .phone-c .header-c h2 {
+    font-family: 'Noto Sans Kannada', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+  }
+  .phone-c .header-c .namaste {
+    font-size: 13px;
+    opacity: 0.8;
+    margin-top: 4px;
+    font-family: 'Noto Sans Kannada', sans-serif;
+  }
+  .phone-c .mitti-card {
+    background: #fff;
+    margin: 14px 16px 10px;
+    padding: 16px;
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(191,54,12,0.08);
+    font-family: 'Noto Sans Kannada', 'DM Sans', sans-serif;
+    font-size: 13px;
+    color: #4E342E;
+    line-height: 1.7;
+  }
+  .phone-c .mitti-card .emoji-tag {
+    font-size: 18px;
+    margin-right: 8px;
+  }
+  .phone-c .mitti-card .card-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #BF360C;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  .phone-c .divider {
+    height: 1px;
+    background: linear-gradient(to right, transparent, #D7CCC8, transparent);
+    margin: 10px 0;
+  }
+  .phone-c .mitti-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .phone-c .bottomnav {
+    background: #4E342E;
+    color: #FFCCBC;
+  }
+  .phone-c .navitem.active { color: #FFE0B2; }
+  .phone-c .navitem.active .navicon { background: rgba(255,224,178,0.15); }
+
+  /* ========================================
+     OPTION D: Modern Agri-Tech
+     ======================================== */
+  .phone-d {
+    background: #0C1F0E;
+    border: 3px solid #C6FF00;
+  }
+  .phone-d .statusbar { background: #071207; color: #C6FF00; }
+  .phone-d .header-d {
+    padding: 20px;
+  }
+  .phone-d .header-d .logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    color: #C6FF00;
+  }
+  .phone-d .header-d .tagline {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: #4CAF50;
+    margin-top: 2px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .phone-d .hero-stat {
+    margin: 0 16px 16px;
+    padding: 18px;
+    background: linear-gradient(135deg, #1B5E20, #2E7D32);
+    border-radius: 16px;
+    border: 1px solid rgba(198,255,0,0.2);
+  }
+  .phone-d .hero-stat .big-price {
+    font-family: 'Space Mono', monospace;
+    font-size: 28px;
+    font-weight: 700;
+    color: #C6FF00;
+  }
+  .phone-d .hero-stat .price-label {
+    font-size: 11px;
+    color: #81C784;
+    margin-top: 2px;
+  }
+  .phone-d .hero-stat .trend {
+    font-size: 12px;
+    color: #C6FF00;
+    margin-top: 6px;
+  }
+  .phone-d .d-section {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: #4CAF50;
+    padding: 0 16px;
+    margin: 14px 0 8px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .phone-d .d-card {
+    background: rgba(255,255,255,0.04);
+    margin: 0 16px 8px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.08);
+    font-size: 12.5px;
+    color: #C8E6C9;
+    font-family: 'Noto Sans Kannada', 'DM Sans', sans-serif;
+    line-height: 1.5;
+  }
+  .phone-d .d-card .d-tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: #C6FF00;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  .phone-d .bottomnav {
+    background: #071207;
+    color: #4CAF50;
+    border-top: 1px solid rgba(198,255,0,0.1);
+  }
+  .phone-d .navitem.active { color: #C6FF00; }
+  .phone-d .navitem.active .navicon { background: rgba(198,255,0,0.1); }
+
+  .content-area {
+    padding-bottom: 80px;
+  }
+</style>
+</head>
+<body>
+
+<h1>KrishiMitra — Pick Your UI Design</h1>
+<p class="subtitle">Open this file in your browser. Each phone shows how the Home screen (daily digest) will look for a farmer.</p>
+
+<div class="options-grid">
+
+  <!-- ============ OPTION A ============ -->
+  <div class="option-wrapper">
+    <div class="option-label">Option A: Earthy Harvest 🌾</div>
+    <div class="option-desc">Green + amber on cream. Warm, agricultural, trustworthy.</div>
+    <div class="phone phone-a">
+      <div class="phone-inner">
+        <div class="statusbar"><span>9:41</span><span>📶 🔋</span></div>
+        <div class="header-a">
+          <h2>🌾 ಕೃಷಿಮಿತ್ರ</h2>
+          <div class="date">ಮಂಗಳವಾರ, ಮಾರ್ಚ್ 18, 2026</div>
+        </div>
+        <div class="content-area">
+          <div class="greeting">🙏 ನಮಸ್ಕಾರ! ಇಂದಿನ 7 ಕೃಷಿ ಸುದ್ದಿಗಳು ಸಿದ್ಧ</div>
+
+          <div class="digest-card dc-price">
+            <div class="tag">💰 ಬೆಲೆ</div>
+            ಮಂಗಳೂರು ಮಂಡಿಯಲ್ಲಿ ಅಡಿಕೆ ₹42,000/ಕ್ವಿಂ ತಲುಪಿದೆ — ಮಾರಾಟಕ್ಕೆ ಒಳ್ಳೆಯ ಸಮಯ
+          </div>
+
+          <div class="digest-card dc-crop">
+            <div class="tag">🌿 ಬೆಳೆ</div>
+            ಕೊಳೆ ರೋಗ ಎಚ್ಚರಿಕೆ: ಅಡಿಕೆ ತೋಟಕ್ಕೆ ಬೋರ್ಡೋ ಮಿಶ್ರಣ ಸಿಂಪಡಿಸಿ
+          </div>
+
+          <div class="digest-card dc-scheme">
+            <div class="tag">🏛️ ಯೋಜನೆ</div>
+            ಪಿಎಂ ಕಿಸಾನ್ 19ನೇ ಕಂತು ₹2,000 ಶೀಘ್ರದಲ್ಲೇ — ಇ-ಕೆವೈಸಿ ಮಾಡಿ
+          </div>
+
+          <div class="digest-card dc-weather">
+            <div class="tag">🌧️ ಹವಾಮಾನ</div>
+            ಮುಂದಿನ 3 ದಿನ ಮಳೆ ಸಾಧ್ಯತೆ — ಕೊಯ್ಲು ಮುಂದೂಡಿ
+          </div>
+
+          <div class="digest-card dc-crop">
+            <div class="tag">🌿 ಬೆಳೆ</div>
+            ತೆಂಗಿನಕಾಯಿ: ನೀರಾವರಿ ಹೆಚ್ಚಿಸಿ, ಬೇಸಿಗೆಯಲ್ಲಿ ಇಳುವರಿ ಹೆಚ್ಚಿಸಿ
+          </div>
+        </div>
+
+        <div class="bottomnav">
+          <div class="navitem active"><div class="navicon">🏠</div>ಮುಖಪುಟ</div>
+          <div class="navitem"><div class="navicon">💬</div>ಕೇಳಿ</div>
+          <div class="navitem"><div class="navicon">📊</div>ಬೆಲೆ</div>
+          <div class="navitem"><div class="navicon">📋</div>ಯೋಜನೆ</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ OPTION B ============ -->
+  <div class="option-wrapper">
+    <div class="option-label">Option B: Clean Portal 🏛️</div>
+    <div class="option-desc">White + blue + orange. Official, clean, data-dense.</div>
+    <div class="phone phone-b">
+      <div class="phone-inner">
+        <div class="statusbar"><span>9:41</span><span>📶 🔋</span></div>
+        <div class="header-b">
+          <h2>KrishiMitra</h2>
+          <div class="date">Tuesday, March 18, 2026 • DK / Udupi</div>
+        </div>
+        <div class="content-area">
+          <div class="quick-stats">
+            <div class="stat-box">
+              <div class="num">₹42K</div>
+              <div class="lbl">Arecanut /qtl</div>
+            </div>
+            <div class="stat-box">
+              <div class="num">₹12.5K</div>
+              <div class="lbl">Coconut /qtl</div>
+            </div>
+            <div class="stat-box">
+              <div class="num">🌧️ 28°C</div>
+              <div class="lbl">Rain likely</div>
+            </div>
+            <div class="stat-box">
+              <div class="num">3</div>
+              <div class="lbl">New schemes</div>
+            </div>
+          </div>
+
+          <div class="section-title">📰 Today's Digest</div>
+
+          <div class="news-item">
+            <span class="badge badge-price">PRICE</span>
+            <div>ಮಂಗಳೂರು ಮಂಡಿಯಲ್ಲಿ ಅಡಿಕೆ ₹42,000/ಕ್ವಿಂ ತಲುಪಿದೆ</div>
+          </div>
+
+          <div class="news-item">
+            <span class="badge badge-crop">CROP</span>
+            <div>ಕೊಳೆ ರೋಗ ಎಚ್ಚರಿಕೆ: ಬೋರ್ಡೋ ಮಿಶ್ರಣ ಸಿಂಪಡಿಸಿ</div>
+          </div>
+
+          <div class="news-item">
+            <span class="badge badge-scheme">SCHEME</span>
+            <div>ಪಿಎಂ ಕಿಸಾನ್ 19ನೇ ಕಂತು ₹2,000 ಶೀಘ್ರದಲ್ಲೇ</div>
+          </div>
+
+          <div class="news-item">
+            <span class="badge badge-weather">WEATHER</span>
+            <div>ಮುಂದಿನ 3 ದಿನ ಮಳೆ ಸಾಧ್ಯತೆ — ಕೊಯ್ಲು ಮುಂದೂಡಿ</div>
+          </div>
+        </div>
+
+        <div class="bottomnav">
+          <div class="navitem active"><div class="navicon">🏠</div>Home</div>
+          <div class="navitem"><div class="navicon">💬</div>Ask</div>
+          <div class="navitem"><div class="navicon">📊</div>Prices</div>
+          <div class="navitem"><div class="navicon">📋</div>Schemes</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ OPTION C ============ -->
+  <div class="option-wrapper">
+    <div class="option-label">Option C: Warm Mitti 🏺</div>
+    <div class="option-desc">Terracotta + brown + warm cream. Homely, Indian, diary-like.</div>
+    <div class="phone phone-c">
+      <div class="phone-inner">
+        <div class="statusbar"><span>9:41</span><span>📶 🔋</span></div>
+        <div class="header-c">
+          <h2>🙏 ಕೃಷಿಮಿತ್ರ</h2>
+          <div class="namaste">ನಮಸ್ಕಾರ ರೈತರೇ! ಇಂದಿನ ಸುದ್ದಿ ಸಿದ್ಧ.</div>
+        </div>
+        <div class="content-area">
+          <div class="mitti-card">
+            <div class="card-title">📰 ಇಂದಿನ ಸುದ್ದಿ — ಮಾರ್ಚ್ 18</div>
+
+            <div class="mitti-item">
+              <span class="emoji-tag">💰</span>
+              <span>ಮಂಗಳೂರು ಮಂಡಿಯಲ್ಲಿ ಅಡಿಕೆ ₹42,000/ಕ್ವಿಂ ತಲುಪಿದೆ — ಮಾರಾಟಕ್ಕೆ ಒಳ್ಳೆಯ ಸಮಯ</span>
+            </div>
+            <div class="divider"></div>
+
+            <div class="mitti-item">
+              <span class="emoji-tag">🌿</span>
+              <span>ಕೊಳೆ ರೋಗ ಎಚ್ಚರಿಕೆ: ಅಡಿಕೆ ತೋಟಕ್ಕೆ ಬೋರ್ಡೋ ಮಿಶ್ರಣ ಸಿಂಪಡಿಸಿ</span>
+            </div>
+            <div class="divider"></div>
+
+            <div class="mitti-item">
+              <span class="emoji-tag">🏛️</span>
+              <span>ಪಿಎಂ ಕಿಸಾನ್ 19ನೇ ಕಂತು ₹2,000 — ಇ-ಕೆವೈಸಿ ಪೂರ್ಣಗೊಳಿಸಿ</span>
+            </div>
+            <div class="divider"></div>
+
+            <div class="mitti-item">
+              <span class="emoji-tag">🌧️</span>
+              <span>ಮುಂದಿನ 3 ದಿನ ಮಳೆ ಸಾಧ್ಯತೆ — ಕೊಯ್ಲು ಮುಂದೂಡಿ</span>
+            </div>
+            <div class="divider"></div>
+
+            <div class="mitti-item">
+              <span class="emoji-tag">🌿</span>
+              <span>ತೆಂಗಿನಕಾಯಿ: ಬೇಸಿಗೆಯಲ್ಲಿ ನೀರಾವರಿ ಹೆಚ್ಚಿಸಿ, ಇಳುವರಿ ಸುಧಾರಿಸಿ</span>
+            </div>
+          </div>
+
+          <div class="mitti-card" style="border: 2px dashed #D7CCC8; background: #FFF8E1;">
+            <div style="text-align:center; color:#8D6E63; font-size:14px; font-family:'Noto Sans Kannada',sans-serif;">
+              💬 ಪ್ರಶ್ನೆ ಕೇಳಿ<br>
+              <span style="font-size:11px; opacity:0.7;">ಅಡಿಕೆ, ತೆಂಗು, ಯೋಜನೆ — ಏನನ್ನಾದರೂ ಕೇಳಿ</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="bottomnav">
+          <div class="navitem active"><div class="navicon">🏠</div>ಮುಖಪುಟ</div>
+          <div class="navitem"><div class="navicon">💬</div>ಕೇಳಿ</div>
+          <div class="navitem"><div class="navicon">📊</div>ಬೆಲೆ</div>
+          <div class="navitem"><div class="navicon">📋</div>ಯೋಜನೆ</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ OPTION D ============ -->
+  <div class="option-wrapper">
+    <div class="option-label">Option D: Modern Agri-Tech 🚀</div>
+    <div class="option-desc">Dark green + neon lime. Bold, tech-forward, fintech-for-farming.</div>
+    <div class="phone phone-d">
+      <div class="phone-inner">
+        <div class="statusbar"><span>9:41</span><span>📶 🔋</span></div>
+        <div class="header-d">
+          <div class="logo">KRISHI</div>
+          <div class="tagline">AI Farm Assistant • DK / Udupi</div>
+        </div>
+        <div class="content-area">
+          <div class="hero-stat">
+            <div class="price-label">ARECANUT • MANGALORE APMC</div>
+            <div class="big-price">₹42,000<span style="font-size:12px;color:#81C784">/qtl</span></div>
+            <div class="trend">▲ +₹1,200 from yesterday</div>
+          </div>
+
+          <div class="d-section">// Today's Digest</div>
+
+          <div class="d-card">
+            <div class="d-tag">PRICE_UPDATE</div>
+            ಮಂಗಳೂರು ಮಂಡಿಯಲ್ಲಿ ಅಡಿಕೆ ₹42,000 — ಮಾರಾಟಕ್ಕೆ ಒಳ್ಳೆಯ ಸಮಯ
+          </div>
+
+          <div class="d-card">
+            <div class="d-tag">DISEASE_ALERT</div>
+            ಕೊಳೆ ರೋಗ ಎಚ್ಚರಿಕೆ: ಬೋರ್ಡೋ ಮಿಶ್ರಣ ಸಿಂಪಡಿಸಿ
+          </div>
+
+          <div class="d-card">
+            <div class="d-tag">GOVT_SCHEME</div>
+            ಪಿಎಂ ಕಿಸಾನ್ 19ನೇ ಕಂತು ₹2,000 — ಇ-ಕೆವೈಸಿ ಮಾಡಿ
+          </div>
+
+          <div class="d-card">
+            <div class="d-tag">WEATHER</div>
+            🌧️ ಮುಂದಿನ 3 ದಿನ ಮಳೆ — ಕೊಯ್ಲು ಮುಂದೂಡಿ
+          </div>
+        </div>
+
+        <div class="bottomnav">
+          <div class="navitem active"><div class="navicon">⌂</div>HOME</div>
+          <div class="navitem"><div class="navicon">⊹</div>ASK</div>
+          <div class="navitem"><div class="navicon">◎</div>PRICE</div>
+          <div class="navitem"><div class="navicon">▤</div>SCHEME</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div style="text-align:center; margin-top:50px; color:#555; font-size:13px;">
+  Pick one (A, B, C, or D) and tell me. I'll implement it in Jetpack Compose.
+</div>
+
+</body>
+</html>

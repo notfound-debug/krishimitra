@@ -1,0 +1,13 @@
+<!-- English strings (default) -->
+<resources>
+    <string name="app_name">KrishiMitra</string>
+    <string name="tab_home">Home</string>
+    <string name="tab_chat">Ask</string>
+    <string name="tab_prices">Prices</string>
+    <string name="tab_schemes">Schemes</string>
+    <string name="digest_title">Today\'s Farm News</string>
+    <string name="loading">Loading…</string>
+    <string name="offline_badge">Last updated: %1$s</string>
+    <string name="no_digest">No digest available yet. Pull down to refresh.</string>
+    <string name="error_network">No internet connection. Showing cached data.</string>
+</resources>

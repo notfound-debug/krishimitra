@@ -1,0 +1,40 @@
+# Daily Digest Generator
+#
+# Runs every day at 5:00 AM IST (23:30 UTC previous day)
+# Calls our backend to generate the daily news digest
+#
+# What happens:
+# 1. GitHub Actions wakes up at the scheduled time
+# 2. Sends a POST request to the KrishiMitra backend
+# 3. Backend fetches RSS feeds → LLM summarizes → saves digest
+# 4. Farmers see fresh digest when they open the app in the morning
+
+name: Daily News Digest
+
+on:
+  schedule:
+    # 23:30 UTC = 5:00 AM IST (next day)
+    - cron: '30 23 * * *'
+  workflow_dispatch:  # Allows manual trigger from GitHub UI
+
+jobs:
+  generate-digest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger digest generation
+        run: |
+          # Replace with your actual HuggingFace Spaces URL after deployment
+          BACKEND_URL="${{ secrets.BACKEND_URL }}"
+
+          if [ -z "$BACKEND_URL" ]; then
+            echo "BACKEND_URL secret not set. Skipping."
+            exit 0
+          fi
+
+          echo "Triggering digest generation at $BACKEND_URL"
+          curl -X POST \
+            "$BACKEND_URL/api/digest/generate" \
+            -H "Content-Type: application/json" \
+            --max-time 60 \
+            --retry 2 \
+            -w "\nHTTP Status: %{http_code}\n"
