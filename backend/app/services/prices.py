@@ -97,7 +97,31 @@ APMC_NAME_KN: dict[str, str] = {
 
 
 # ---------------------------------------------------------------------------
-# commodityonline.com scraper config
+# kisandeals.com scraper config (primary — more reliable than commodityonline)
+# ---------------------------------------------------------------------------
+
+KISANDEALS_SLUGS: dict[str, str] = {
+    "arecanut": "ARECANUT(BETELNUT-SUPARI)",
+    "coconut": "COCONUT",
+    "copra": "COPRA",
+    "banana": "BANANA",
+    "rice": "PADDY(DHAN)(COMMON)",
+    "paddy": "PADDY(DHAN)(COMMON)",
+    "black pepper": "BLACK-PEPPER",
+    "cashewnut": "CASHEWNUTS",
+    "cashew": "CASHEWNUTS",
+}
+
+# Target APMCs we care about (lowercase for matching)
+TARGET_APMC_NAMES = {
+    "mangalore", "puttur", "sullia", "bantwal", "belthangdi", "belthangady",
+    "udupi", "kundapura", "karkala", "sirsi", "kumta", "siddapur", "honnavar",
+    "sagar", "shimoga",
+}
+
+
+# ---------------------------------------------------------------------------
+# commodityonline.com scraper config (backup)
 # ---------------------------------------------------------------------------
 
 COMMODITY_ONLINE_SLUGS: dict[str, str] = {
@@ -435,7 +459,115 @@ async def _fetch_from_data_gov(crop_key: str) -> dict[str, Any] | None:
 
 
 # ---------------------------------------------------------------------------
-# commodityonline.com scraper
+# kisandeals.com scraper (primary)
+# ---------------------------------------------------------------------------
+
+async def _try_kisandeals(crop_key: str) -> dict[str, Any] | None:
+    """Scrape mandi prices from kisandeals.com for Karnataka."""
+    slug = KISANDEALS_SLUGS.get(crop_key)
+    if not slug:
+        return None
+
+    display_name = CROP_DISPLAY_NAME.get(crop_key, crop_key.title())
+    crop_kn = CROP_NAME_KN.get(crop_key, display_name)
+
+    url = f"https://www.kisandeals.com/mandiprices/{slug}/KARNATAKA/ALL"
+    try:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=15) as client:
+            resp = await client.get(url)
+            resp.raise_for_status()
+    except Exception as e:
+        logger.warning(f"kisandeals request failed for {crop_key}: {e}")
+        return None
+
+    try:
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(resp.text, "html.parser")
+        tables = soup.find_all("table")
+
+        # Find the detailed table (has columns: Commodity, Variety, State, District, Mandi, Min, Modal, Max, Date, Trend)
+        price_table = None
+        for t in tables:
+            headers = [h.text.strip().lower() for h in t.find_all("th")]
+            if any("mandi" in h or "market" in h for h in headers):
+                price_table = t
+                break
+
+        if not price_table:
+            # Try the last table (usually the detailed one)
+            if len(tables) >= 4:
+                price_table = tables[3]
+            else:
+                return None
+
+        rows = price_table.find_all("tr")[1:]  # Skip header
+        prices = []
+        seen_apmcs = set()
+
+        for row in rows:
+            cells = row.find_all("td")
+            if len(cells) < 8:
+                continue
+
+            mandi_raw = cells[4].text.strip().lower()
+
+            # Filter to our target APMCs
+            matched_apmc = None
+            for target in TARGET_APMC_NAMES:
+                if target in mandi_raw:
+                    matched_apmc = target.title()
+                    # Normalize names
+                    if matched_apmc == "Belthangdi":
+                        matched_apmc = "Belthangady"
+                    break
+
+            if not matched_apmc or matched_apmc in seen_apmcs:
+                continue
+            seen_apmcs.add(matched_apmc)
+
+            # Parse prices — remove "₹" and commas
+            def parse_price(text):
+                return int(float(text.replace("₹", "").replace(",", "").strip()))
+
+            try:
+                min_p = parse_price(cells[5].text)
+                modal_p = parse_price(cells[6].text)
+                max_p = parse_price(cells[7].text)
+            except (ValueError, IndexError):
+                continue
+
+            prices.append({
+                "apmc": matched_apmc,
+                "min_price": min_p,
+                "max_price": max_p,
+                "modal_price": modal_p,
+                "trend": "",
+                "trend_direction": "stable",
+            })
+
+        if not prices:
+            return None
+
+        prices.sort(key=lambda x: x["max_price"], reverse=True)
+        best_apmc = prices[0]["apmc"]
+
+        return {
+            "crop": display_name,
+            "crop_kn": crop_kn,
+            "date": str(date.today()),
+            "best_apmc": best_apmc,
+            "prices": prices,
+            "recommendation_kn": f"{APMC_NAME_KN.get(best_apmc, best_apmc)} ಮಂಡಿಯಲ್ಲಿ ಅತ್ಯುತ್ತಮ ಬೆಲೆ.",
+            "recommendation_en": f"Best price at {best_apmc} mandi.",
+        }
+
+    except Exception as e:
+        logger.error(f"kisandeals parse error for {crop_key}: {e}")
+        return None
+
+
+# ---------------------------------------------------------------------------
+# commodityonline.com scraper (backup)
 # ---------------------------------------------------------------------------
 
 async def _try_commodityonline(crop_key: str) -> dict[str, Any] | None:
@@ -593,11 +725,18 @@ async def scrape_and_save_all_crops() -> dict:
         crop_kn = CROP_NAME_KN.get(crop_key, display_name)
 
         try:
-            # Try commodityonline first
+            # Try kisandeals first (most reliable)
+            scraped = await _try_kisandeals(crop_key)
+            if scraped and scraped.get("prices"):
+                db.save_mandi_prices(display_name, crop_kn, scraped["prices"], "kisandeals")
+                results[crop_key] = f"OK ({len(scraped['prices'])} markets via kisandeals)"
+                continue
+
+            # Try commodityonline
             scraped = await _try_commodityonline(crop_key)
             if scraped and scraped.get("prices"):
                 db.save_mandi_prices(display_name, crop_kn, scraped["prices"], "commodityonline")
-                results[crop_key] = f"OK ({len(scraped['prices'])} markets)"
+                results[crop_key] = f"OK ({len(scraped['prices'])} markets via commodityonline)"
                 continue
 
             # Try data.gov.in
@@ -607,7 +746,7 @@ async def scrape_and_save_all_crops() -> dict:
                 results[crop_key] = f"OK ({len(live['prices'])} markets via data.gov)"
                 continue
 
-            results[crop_key] = "SKIP (no data)"
+            results[crop_key] = "SKIP (no data from any source)"
 
         except Exception as e:
             results[crop_key] = f"FAIL ({e})"
@@ -684,19 +823,28 @@ async def fetch_prices(crop: str) -> dict[str, Any]:
             logger.info(f"Returning DB prices for '{crop_key}': {len(prices)} APMCs, date={latest_date}")
             return result
 
-    # --- Strategy 2: Scrape commodityonline + save to DB ---
+    # --- Strategy 2: Scrape kisandeals.com (primary scraper) + save to DB ---
+    try:
+        scraped = await _try_kisandeals(crop_key)
+        if scraped is not None:
+            scraped["price_source"] = "kisandeals"
+            db.save_mandi_prices(display_name, crop_kn, scraped["prices"], source="kisandeals")
+            logger.info(f"kisandeals: saved prices for '{crop_key}': {len(scraped['prices'])} markets")
+            return scraped
+    except Exception:
+        logger.exception("kisandeals scrape failed for '%s'", crop_key)
+
+    # --- Strategy 3: Scrape commodityonline (backup scraper) ---
     try:
         scraped = await _try_commodityonline(crop_key)
         if scraped is not None:
             scraped["price_source"] = "commodityonline"
-            # Save to DB for future requests
             db.save_mandi_prices(display_name, crop_kn, scraped["prices"], source="commodityonline")
-            logger.info(f"Scraped and saved prices for '{crop_key}': {len(scraped['prices'])} markets")
             return scraped
     except Exception:
         logger.exception("commodityonline scrape failed for '%s'", crop_key)
 
-    # --- Strategy 3: data.gov.in API ---
+    # --- Strategy 4: data.gov.in API ---
     try:
         live = await _fetch_from_data_gov(crop_key)
         if live is not None:
