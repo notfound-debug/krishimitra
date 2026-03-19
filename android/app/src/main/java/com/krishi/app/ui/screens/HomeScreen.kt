@@ -34,6 +34,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -42,6 +43,19 @@ import com.krishi.app.ui.viewmodel.DigestItem
 import com.krishi.app.ui.viewmodel.HomeCardData
 import com.krishi.app.ui.viewmodel.HomeViewModel
 import com.krishi.app.ui.viewmodel.SourceLink
+
+private fun formatDate(dateStr: String, language: String): String {
+    val parts = dateStr.split("-")
+    if (parts.size != 3) return dateStr
+    val year = parts[0]
+    val month = parts[1].toIntOrNull() ?: return dateStr
+    val day = parts[2].toIntOrNull() ?: return dateStr
+    if (month < 1 || month > 12) return dateStr
+    val knMonths = listOf("ಜನವರಿ", "ಫೆಬ್ರವರಿ", "ಮಾರ್ಚ್", "ಏಪ್ರಿಲ್", "ಮೇ", "ಜೂನ್", "ಜುಲೈ", "ಆಗಸ್ಟ್", "ಸೆಪ್ಟೆಂಬರ್", "ಅಕ್ಟೋಬರ್", "ನವೆಂಬರ್", "ಡಿಸೆಂಬರ್")
+    val enMonths = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+    val monthName = if (language == "kn") knMonths[month - 1] else enMonths[month - 1]
+    return "$day $monthName $year"
+}
 
 @Composable
 fun HomeHeader(language: String, taluk: String, onToggleLanguage: () -> Unit) {
@@ -152,7 +166,7 @@ fun HeroPriceCard(cards: HomeCardData, language: String) {
             if (cards.priceDate.isNotEmpty()) {
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "📅 ${cards.priceDate} ${if (!cards.isRealPrice) if (language == "kn") "(ಅಂದಾಜು)" else "(Est.)" else ""}",
+                    text = "📅 ${formatDate(cards.priceDate, language)} ${if (!cards.isRealPrice) if (language == "kn") "(ಅಂದಾಜು)" else "(Est.)" else ""}",
                     fontSize = 10.sp,
                     color = Color.White.copy(alpha = 0.6f),
                 )
@@ -186,8 +200,8 @@ fun StatsGrid(cards: HomeCardData, language: String) {
         // Card 3: Smart insight
         StatCard(
             emoji = "💡",
-            value = if (language == "kn") "ಸಲಹೆ" else "Tip",
-            label = cards.insightText.take(15).ifEmpty { if (language == "kn") "ಲೋಡ್ ಆಗುತ್ತಿದೆ" else "Loading" },
+            value = cards.insightCrop.ifEmpty { if (language == "kn") "ಸಲಹೆ" else "Tip" },
+            label = cards.insightText.take(25).ifEmpty { if (language == "kn") "ಲೋಡ್ ಆಗುತ್ತಿದೆ" else "Loading" },
             modifier = Modifier.weight(1f),
         )
     }
@@ -204,8 +218,8 @@ fun StatCard(emoji: String, value: String, label: String, modifier: Modifier = M
     ) {
         Text(text = emoji, fontSize = 18.sp)
         Spacer(Modifier.height(4.dp))
-        Text(value, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = KrishiColors.Primary)
-        Text(label, fontSize = 12.sp, color = KrishiColors.TextSecondary)
+        Text(value, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = KrishiColors.Primary, textAlign = TextAlign.Center)
+        Text(label, fontSize = 11.sp, color = KrishiColors.TextSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
     }
 }
 

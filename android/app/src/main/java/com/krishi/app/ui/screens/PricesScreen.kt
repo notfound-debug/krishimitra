@@ -34,6 +34,30 @@ import com.krishi.app.data.remote.PricesResponse
 import com.krishi.app.ui.theme.KrishiColors
 import kotlinx.coroutines.launch
 
+private val apmcNameKn = mapOf(
+    "Mangalore" to "ಮಂಗಳೂರು",
+    "Puttur" to "ಪುತ್ತೂರು",
+    "Sullia" to "ಸುಳ್ಯ",
+    "Bantwal" to "ಬಂಟ್ವಾಳ",
+    "Belthangady" to "ಬೆಳ್ತಂಗಡಿ",
+    "Udupi" to "ಉಡುಪಿ",
+    "Kundapura" to "ಕುಂದಾಪುರ",
+    "Karkala" to "ಕಾರ್ಕಳ",
+)
+
+private fun formatDate(dateStr: String, language: String): String {
+    val parts = dateStr.split("-")
+    if (parts.size != 3) return dateStr
+    val year = parts[0]
+    val month = parts[1].toIntOrNull() ?: return dateStr
+    val day = parts[2].toIntOrNull() ?: return dateStr
+    if (month < 1 || month > 12) return dateStr
+    val knMonths = listOf("ಜನವರಿ", "ಫೆಬ್ರವರಿ", "ಮಾರ್ಚ್", "ಏಪ್ರಿಲ್", "ಮೇ", "ಜೂನ್", "ಜುಲೈ", "ಆಗಸ್ಟ್", "ಸೆಪ್ಟೆಂಬರ್", "ಅಕ್ಟೋಬರ್", "ನವೆಂಬರ್", "ಡಿಸೆಂಬರ್")
+    val enMonths = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+    val monthName = if (language == "kn") knMonths[month - 1] else enMonths[month - 1]
+    return "$day $monthName $year"
+}
+
 private data class CropChip(val name: String, val nameKn: String, val emoji: String)
 
 private val crops = listOf(
@@ -183,7 +207,7 @@ fun PricesScreen(language: String) {
                     if (data.date.isNotEmpty()) {
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            "📅 ${data.date}",
+                            "📅 ${formatDate(data.date, language)}",
                             fontSize = 10.sp, color = Color.White.copy(alpha = 0.6f),
                         )
                     }
@@ -229,6 +253,7 @@ fun PricesScreen(language: String) {
                     isHeader = true,
                     isBest = false,
                     bestApmc = "",
+                    language = language,
                 )
                 data.prices.forEach { price ->
                     PriceTableRow(
@@ -240,6 +265,7 @@ fun PricesScreen(language: String) {
                         isBest = price.apmc == data.best_apmc,
                         bestApmc = data.best_apmc,
                         trendDirection = price.trend_direction,
+                        language = language,
                     )
                 }
             }
@@ -277,7 +303,9 @@ private fun PriceTableRow(
     apmc: String, min: String, max: String, trend: String,
     isHeader: Boolean, isBest: Boolean, bestApmc: String,
     trendDirection: String = "",
+    language: String = "kn",
 ) {
+    val displayApmc = if (!isHeader && language == "kn") apmcNameKn[apmc] ?: apmc else apmc
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -287,7 +315,7 @@ private fun PriceTableRow(
     ) {
         Row(Modifier.weight(2f), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                apmc,
+                displayApmc,
                 fontSize = if (isHeader) 9.sp else 12.sp,
                 fontWeight = if (isHeader || isBest) FontWeight.Bold else FontWeight.Normal,
                 color = if (isHeader) KrishiColors.TextMuted else KrishiColors.TextPrimary,

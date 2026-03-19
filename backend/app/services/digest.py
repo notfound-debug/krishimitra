@@ -107,23 +107,34 @@ def _select_top_articles(articles: list[Article], max_items: int = 10) -> list[t
     return selected
 
 
-# --- Lean LLM prompt: only titles → action lines ---
-ACTION_LINE_PROMPT = """You are KrishiMitra, an agri assistant for farmers in Coastal Karnataka.
+# --- LLM prompt: translate titles to Kannada + generate action lines ---
+DIGEST_LLM_PROMPT = """You are KrishiMitra, an agri assistant for farmers in Coastal Karnataka (DK, Udupi, Uttara Kannada).
 
-Below are {count} news headlines relevant to farmers. For EACH headline, write ONE short action line in Kannada (simple spoken Kannada) telling the farmer what to DO or what it MEANS for them.
+Below are {count} news headlines. For EACH headline, provide:
+1. A Kannada translation of the headline (simple spoken Kannada, 1 line)
+2. A Kannada action line starting with → telling the farmer what to DO
 
 RULES:
-- One action line per headline, in the SAME order
-- Each line MUST start with →
-- Keep each line under 80 characters
-- Be practical and specific
+- Use simple spoken Kannada — not literary
+- Keep translations short (under 100 characters)
+- Action lines must start with → and be under 80 characters
+- Be practical and specific to coastal Karnataka farmers
+- Number each item to match the headline number
+
+FORMAT (follow exactly):
+1. ಕನ್ನಡ ಅನುವಾದ
+→ ಕನ್ನಡ ಕ್ರಿಯಾ ಸಾಲು
+
+2. ಕನ್ನಡ ಅನುವಾದ
+→ ಕನ್ನಡ ಕ್ರಿಯಾ ಸಾಲು
 
 HEADLINES:
 {headlines}
 
-ALSO write the same action lines in English after a separator line: ---ENGLISH---
+---ENGLISH---
+After the Kannada section, write English action lines only (one per headline, starting with →):
 
-Action lines:"""
+Translate and generate now:"""
 
 
 async def generate_daily_digest() -> dict:
@@ -155,41 +166,37 @@ async def generate_daily_digest() -> dict:
             "generated_at": datetime.now(IST).isoformat(),
         }
 
-    # Step 2+3: Categorize with keywords + pick top articles (FREE)
-    top_articles = _select_top_articles(articles, max_items=10)
+    # Step 2+3: Categorize with keywords + pick top 8 articles (FREE)
+    top_articles = _select_top_articles(articles, max_items=8)
     logger.info(f"Selected {len(top_articles)} articles from {len(articles)} total")
 
-    # Step 4: Build headlines for the LLM (just titles — not full articles)
+    # Step 4: Build headlines for the LLM
     headlines = "\n".join(
         f"{i}. {article.title}" for i, (article, _cat) in enumerate(top_articles, 1)
     )
 
-    # Step 5: ONE small LLM call — action lines only (~500 tokens total)
-    prompt = ACTION_LINE_PROMPT.format(count=len(top_articles), headlines=headlines)
-    raw_action_lines = await generate_digest(prompt)
+    # Step 5: LLM call — translate titles to Kannada + action lines (~1000 tokens)
+    prompt = DIGEST_LLM_PROMPT.format(count=len(top_articles), headlines=headlines)
+    raw_llm = await generate_digest(prompt)
 
-    # Step 6: Parse action lines and combine with article data
-    kn_actions, en_actions = _parse_action_lines(raw_action_lines, len(top_articles))
+    # Step 6: Parse LLM output
+    kn_titles, kn_actions, en_actions = _parse_llm_digest(raw_llm, len(top_articles))
 
-    # Build Kannada digest
+    # Build Kannada + English digest
     kannada_lines = []
     english_lines = []
     for idx, (article, category) in enumerate(top_articles):
         meta = CATEGORY_META.get(category, CATEGORY_META["general"])
-        # Kannada line: emoji + Kannada category label + title (which may already be Kannada)
-        kn_line = f"* {meta['emoji']} {meta['kn']}: {article.title}"
-        if article.summary:
-            # Add first ~150 chars of summary for context
-            short_summary = article.summary[:150].rstrip()
-            if len(article.summary) > 150:
-                short_summary += "..."
-            kn_line += f"\n  {short_summary}"
-        kn_line += f"\n{kn_actions[idx]}"
+
+        # Kannada: LLM-translated title + action line
+        kn_title = kn_titles[idx] if idx < len(kn_titles) else article.title
+        kn_action = kn_actions[idx] if idx < len(kn_actions) else "→ ವಿವರಗಳಿಗೆ ನೋಡಿ"
+        kn_line = f"* {meta['emoji']} {meta['kn']}: {kn_title}\n{kn_action}"
         kannada_lines.append(kn_line)
 
-        # English line
-        en_line = f"* {meta['emoji']} {meta['en']}: {article.title}"
-        en_line += f"\n{en_actions[idx]}"
+        # English: original title + English action line
+        en_action = en_actions[idx] if idx < len(en_actions) else "→ Check details"
+        en_line = f"* {meta['emoji']} {meta['en']}: {article.title}\n{en_action}"
         english_lines.append(en_line)
 
     kannada = "\n\n".join(kannada_lines)
@@ -261,6 +268,79 @@ def _parse_action_lines(raw: str, expected_count: int) -> tuple[list[str], list[
         en_lines.append("→ See article for details")
 
     return kn_lines[:expected_count], en_lines[:expected_count]
+
+
+def _parse_llm_digest(raw: str, expected_count: int) -> tuple[list[str], list[str], list[str]]:
+    """
+    Parse LLM output that contains Kannada titles + action lines + English action lines.
+
+    Expected format from LLM:
+    1. ಕನ್ನಡ ಶೀರ್ಷಿಕೆ
+    → ಕನ್ನಡ ಕ್ರಿಯಾ ಸಾಲು
+
+    2. ಕನ್ನಡ ಶೀರ್ಷಿಕೆ
+    → ಕನ್ನಡ ಕ್ರಿಯಾ ಸಾಲು
+
+    ---ENGLISH---
+    → English action line
+    → English action line
+
+    Returns: (kn_titles, kn_actions, en_actions)
+    """
+    import re
+
+    # Split Kannada and English sections
+    kn_raw = raw
+    en_raw = ""
+    for pattern in [r"---+\s*ENGLISH\s*---+", r"---+\s*ENGLISH\s*", r"\nENGLISH\s*:?\s*\n"]:
+        parts = re.split(pattern, raw, maxsplit=1, flags=re.IGNORECASE)
+        if len(parts) == 2:
+            kn_raw = parts[0]
+            en_raw = parts[1]
+            break
+
+    # Parse Kannada section: numbered items with titles and → action lines
+    kn_titles = []
+    kn_actions = []
+
+    lines = kn_raw.strip().split("\n")
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+
+        # Look for numbered lines: "1. ಕನ್ನಡ ಶೀರ್ಷಿಕೆ" or just non-empty non-action lines
+        numbered = re.match(r"^\d+\.\s*(.+)", line)
+        if numbered:
+            title = numbered.group(1).strip()
+            kn_titles.append(title)
+
+            # Check if next line is an action line
+            if i + 1 < len(lines) and lines[i + 1].strip().startswith("→"):
+                kn_actions.append(lines[i + 1].strip())
+                i += 2
+                continue
+            else:
+                kn_actions.append("→ ವಿವರಗಳಿಗೆ ನೋಡಿ")
+        elif line.startswith("→") and kn_titles and len(kn_actions) < len(kn_titles):
+            # Orphan action line — attach to last title
+            kn_actions.append(line)
+
+        i += 1
+
+    # Parse English action lines
+    en_actions = [line.strip() for line in en_raw.split("\n") if line.strip().startswith("→")]
+
+    # Pad with fallbacks
+    while len(kn_titles) < expected_count:
+        kn_titles.append("")
+    while len(kn_actions) < expected_count:
+        kn_actions.append("→ ವಿವರಗಳಿಗೆ ನೋಡಿ")
+    while len(en_actions) < expected_count:
+        en_actions.append("→ Check details")
+
+    logger.info(f"Parsed LLM digest: {len(kn_titles)} titles, {len(kn_actions)} KN actions, {len(en_actions)} EN actions")
+
+    return kn_titles[:expected_count], kn_actions[:expected_count], en_actions[:expected_count]
 
 
 def _split_digest(raw: str) -> tuple[str, str]:

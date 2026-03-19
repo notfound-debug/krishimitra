@@ -33,6 +33,29 @@ import com.krishi.app.data.remote.SchemeResponse
 import com.krishi.app.ui.theme.KrishiColors
 import kotlinx.coroutines.launch
 
+private fun mapDistrictToApi(district: String): String = when {
+    "ದಕ್ಷಿಣ ಕನ್ನಡ" in district -> "Dakshina Kannada"
+    "ಉಡುಪಿ" in district -> "Udupi"
+    "ಉತ್ತರ ಕನ್ನಡ" in district -> "Uttara Kannada"
+    else -> district
+}
+
+private fun mapCropToApi(crop: String): String {
+    val clean = crop.replace(Regex("[🌴🥥🌾🥜🍫🌳🌶️🍌] ?"), "").trim()
+    return when {
+        "ಅಡಿಕೆ" in clean -> "Arecanut"
+        "ತೆಂಗು" in clean -> "Coconut"
+        "ಭತ್ತ" in clean -> "Rice"
+        "ಕಾಳುಮೆಣಸು" in clean || "ಮೆಣಸು" in clean -> "Black Pepper"
+        "ಗೋಡಂಬಿ" in clean -> "Cashew"
+        "ಕೊಬ್ಬರಿ" in clean -> "Copra"
+        "ಬಾಳೆ" in clean -> "Banana"
+        "ಕೋಕೋ" in clean -> "Cocoa"
+        "ರಬ್ಬರ್" in clean -> "Rubber"
+        else -> clean
+    }
+}
+
 @Composable
 fun SchemesScreen(
     language: String,
@@ -47,8 +70,20 @@ fun SchemesScreen(
     LaunchedEffect(Unit) {
         scope.launch {
             try {
-                schemes = ApiClient.service.getSchemes().schemes
-            } catch (_: Exception) { }
+                val apiDistrict = mapDistrictToApi(district).ifEmpty { null }
+                val apiCrops = crops.map { mapCropToApi(it) }.joinToString(",").ifEmpty { null }
+                val acres = landAcres.toDoubleOrNull()
+                schemes = ApiClient.service.getEligibleSchemes(
+                    district = apiDistrict,
+                    crops = apiCrops,
+                    landAcres = acres,
+                ).schemes
+            } catch (_: Exception) {
+                // Fallback to all schemes if eligible endpoint fails
+                try {
+                    schemes = ApiClient.service.getSchemes().schemes
+                } catch (_: Exception) { }
+            }
             isLoading = false
         }
     }

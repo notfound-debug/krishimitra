@@ -145,7 +145,7 @@ class HomeViewModel(
                     val secResponse = ApiClient.service.getPrices(secApiName)
                     val secBest = secResponse.prices.firstOrNull()
                     updatedCards = updatedCards.copy(
-                        secondaryCropName = if (lang == "kn") secResponse.crop_kn else secResponse.crop,
+                        secondaryCropName = if (lang == "kn") secondaryCropRaw else secResponse.crop,
                         secondaryCropPrice = "₹${formatPriceShort(secBest?.max_price ?: 0)}",
                     )
                 }
@@ -155,7 +155,7 @@ class HomeViewModel(
 
             // Weather
             try {
-                val district = _uiState.value.farmerDistrict.ifEmpty { "Dakshina Kannada" }
+                val district = mapDistrictToApi(_uiState.value.farmerDistrict)
                 val weatherResp = ApiClient.service.getWeather(district)
                 updatedCards = updatedCards.copy(
                     weatherTemp = "${weatherResp.temp}°C",
@@ -182,6 +182,13 @@ class HomeViewModel(
 
             _uiState.update { it.copy(cards = updatedCards) }
         }
+    }
+
+    private fun mapDistrictToApi(kannadaDistrict: String): String = when {
+        "ದಕ್ಷಿಣ ಕನ್ನಡ" in kannadaDistrict -> "Dakshina Kannada"
+        "ಉಡುಪಿ" in kannadaDistrict -> "Udupi"
+        "ಉತ್ತರ ಕನ್ನಡ" in kannadaDistrict -> "Uttara Kannada"
+        else -> kannadaDistrict.ifEmpty { "Dakshina Kannada" }
     }
 
     private fun mapCropToApi(kannadaName: String): String {

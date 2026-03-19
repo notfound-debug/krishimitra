@@ -603,6 +603,7 @@ async def fetch_prices(crop: str) -> dict[str, Any]:
     try:
         live = await _fetch_from_data_gov(crop_key)
         if live is not None:
+            live["price_source"] = "data.gov.in"
             logger.info(
                 "Returning live prices for '%s' (%d APMCs)",
                 crop_key, len(live["prices"]),
@@ -615,6 +616,7 @@ async def fetch_prices(crop: str) -> dict[str, Any]:
     try:
         scraped = await _try_commodityonline(crop_key)
         if scraped is not None:
+            scraped["price_source"] = "commodityonline"
             logger.info(
                 "Returning scraped prices for '%s' (%d markets)",
                 crop_key, len(scraped["prices"]),
@@ -629,6 +631,7 @@ async def fetch_prices(crop: str) -> dict[str, Any]:
     logger.info("Using date-seeded fallback prices for '%s'", crop_key)
     fallback = _generate_fallback_response(crop_key)
     if fallback is not None:
+        fallback["price_source"] = "estimated"
         return fallback
 
     # Should never reach here if CROP_DISPLAY_NAME and CROP_PRICE_CONFIG
