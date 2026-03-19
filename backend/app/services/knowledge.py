@@ -27,16 +27,23 @@ logger = logging.getLogger(__name__)
 _FAQ_FILE = Path(__file__).resolve().parent.parent / "data" / "knowledge_base" / "agri_faq.json"
 _SCHEMES_FILE = Path(__file__).resolve().parent.parent / "data" / "schemes.json"
 
-# ChromaDB client — in-memory (fast, no disk needed on HF Spaces)
-_client = chromadb.Client()
+# ChromaDB client — lazy initialized on first query to save startup RAM
+_client = None
 _collection = None
+_initialized = False
 
 
 def _init_knowledge_base():
-    """Load FAQ + schemes into ChromaDB on startup."""
-    global _collection
+    """Load FAQ + schemes into ChromaDB. Called lazily on first query."""
+    global _client, _collection, _initialized
+
+    if _initialized:
+        return
+
+    _initialized = True
 
     try:
+        _client = chromadb.Client()
         _collection = _client.get_or_create_collection(
             name="krishi_knowledge",
             metadata={"hnsw:space": "cosine"},  # cosine similarity for text
@@ -116,8 +123,8 @@ def _init_knowledge_base():
         logger.error(f"Failed to initialize knowledge base: {e}")
 
 
-# Initialize on module load
-_init_knowledge_base()
+# Lazy init — called on first query, not on module load
+# This prevents OOM on HF Spaces during startup
 
 
 def retrieve_context(question: str, language: str = "kn", max_results: int = 3) -> list[dict]:
@@ -132,6 +139,9 @@ def retrieve_context(question: str, language: str = "kn", max_results: int = 3) 
     Returns:
         List of dicts with: question, answer, source, type
     """
+    # Lazy init — first query triggers ChromaDB setup
+    _init_knowledge_base()
+
     if _collection is None or _collection.count() == 0:
         logger.warning("Knowledge base is empty — no context available")
         return []
