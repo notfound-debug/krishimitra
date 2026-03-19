@@ -1,10 +1,10 @@
-# Digest Generator — 5x/day
+# Digest + Price Scraper — 5x/day
 #
 # Runs at: 5 AM, 9 AM, 12 PM, 3 PM, 6 PM IST
-# Each run: fetches RSS → keyword categorize → small LLM call for action lines → saves to Supabase
-# Also keeps HuggingFace Space awake (prevents 48h sleep)
+# Step 1: Wake HF Space + generate digest (news)
+# Step 2: Scrape prices from kisandeals.com + push directly to Supabase
 
-name: News Digest (5x/day)
+name: News & Prices (5x/day)
 
 on:
   schedule:
@@ -13,44 +13,160 @@ on:
     - cron: '30 6 * * *'    # 12:00 PM IST
     - cron: '30 9 * * *'    # 3:00 PM IST
     - cron: '30 12 * * *'   # 6:00 PM IST
-  workflow_dispatch:  # Manual trigger from GitHub UI
+  workflow_dispatch:
 
 jobs:
-  generate-digest:
+  generate-digest-and-prices:
     runs-on: ubuntu-latest
     steps:
-      - name: Wake up Space and generate digest
+      - name: Generate digest via HF Space
         run: |
           BACKEND_URL="${{ secrets.BACKEND_URL }}"
-
           if [ -z "$BACKEND_URL" ]; then
-            echo "ERROR: BACKEND_URL secret not set."
-            echo "Go to repo Settings → Secrets → Add: BACKEND_URL = https://sisaram-krish.hf.space"
+            echo "ERROR: BACKEND_URL not set"
             exit 1
           fi
 
-          echo "=== Waking up HuggingFace Space ==="
-          # First request wakes the Space if it's sleeping
+          echo "=== Waking HF Space ==="
           curl -s "$BACKEND_URL/" --max-time 120 || true
           sleep 5
 
           echo "=== Generating digest ==="
-          HTTP_CODE=$(curl -s -X POST \
-            "$BACKEND_URL/api/digest/generate" \
+          HTTP_CODE=$(curl -s -X POST "$BACKEND_URL/api/digest/generate" \
             -H "Content-Type: application/json" \
-            --max-time 120 \
-            --retry 3 \
-            --retry-delay 10 \
-            -w "%{http_code}" \
-            -o /tmp/response.json)
-
-          echo "HTTP Status: $HTTP_CODE"
-          cat /tmp/response.json
+            --max-time 120 --retry 3 --retry-delay 10 \
+            -w "%{http_code}" -o /tmp/digest.json)
+          echo "Digest HTTP: $HTTP_CODE"
+          cat /tmp/digest.json
           echo ""
 
-          if [ "$HTTP_CODE" -ne 200 ]; then
-            echo "ERROR: Digest generation failed with status $HTTP_CODE"
-            exit 1
-          fi
+      - name: Scrape prices and push to Supabase
+        run: |
+          pip install httpx beautifulsoup4 > /dev/null 2>&1
 
-          echo "=== Digest generated successfully ==="
+          python3 << 'PYTHON_SCRIPT'
+          import httpx, json, os
+          from bs4 import BeautifulSoup
+          from datetime import date
+
+          SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
+          SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
+
+          if not SUPABASE_URL or not SUPABASE_KEY:
+              print("ERROR: SUPABASE_URL or SUPABASE_KEY not set")
+              exit(1)
+
+          CROPS = {
+              "ARECANUT(BETELNUT-SUPARI)": ("Arecanut", "ಅಡಿಕೆ"),
+              "COCONUT": ("Coconut", "ತೆಂಗು"),
+              "COPRA": ("Copra", "ಕೊಬ್ಬರಿ"),
+              "PADDY(DHAN)(COMMON)": ("Rice", "ಭತ್ತ"),
+              "BLACK-PEPPER": ("Black Pepper", "ಕಾಳುಮೆಣಸು"),
+              "CASHEWNUTS": ("Cashew", "ಗೋಡಂಬಿ"),
+              "BANANA": ("Banana", "ಬಾಳೆ"),
+          }
+
+          TARGET_APMCS = {
+              "mangalore", "puttur", "sullia", "bantwal", "belthangdi", "belthangady",
+              "udupi", "kundapura", "karkala", "sirsi", "kumta", "siddapur",
+              "honnavar", "sagar", "shimoga",
+          }
+
+          today = str(date.today())
+          all_rows = []
+
+          for slug, (crop_en, crop_kn) in CROPS.items():
+              url = f"https://www.kisandeals.com/mandiprices/{slug}/KARNATAKA/ALL"
+              try:
+                  r = httpx.get(url, timeout=20, follow_redirects=True)
+                  if r.status_code != 200:
+                      print(f"  {crop_en}: HTTP {r.status_code}")
+                      continue
+
+                  soup = BeautifulSoup(r.text, "html.parser")
+                  tables = soup.find_all("table")
+
+                  # Find detailed table (usually last one with mandi column)
+                  price_table = None
+                  for t in tables:
+                      rows = t.find_all("tr")
+                      if len(rows) > 5:
+                          headers = [h.text.strip().lower() for h in rows[0].find_all(["th", "td"])]
+                          if any("mandi" in h or "market" in h for h in headers):
+                              price_table = t
+                              break
+                  if not price_table and len(tables) >= 4:
+                      price_table = tables[-1]
+                  if not price_table:
+                      print(f"  {crop_en}: no price table found")
+                      continue
+
+                  rows = price_table.find_all("tr")[1:]
+                  seen = set()
+                  count = 0
+
+                  for row in rows:
+                      cells = row.find_all("td")
+                      if len(cells) < 8:
+                          continue
+
+                      mandi = cells[4].text.strip().lower()
+                      matched = None
+                      for t in TARGET_APMCS:
+                          if t in mandi:
+                              matched = t.title()
+                              if matched == "Belthangdi":
+                                  matched = "Belthangady"
+                              break
+
+                      if not matched or matched in seen:
+                          continue
+                      seen.add(matched)
+
+                      try:
+                          def pp(txt):
+                              return int(float(txt.replace("₹", "").replace(",", "").strip()))
+                          min_p = pp(cells[5].text)
+                          modal_p = pp(cells[6].text)
+                          max_p = pp(cells[7].text)
+                      except:
+                          continue
+
+                      all_rows.append({
+                          "crop": crop_en,
+                          "crop_kn": crop_kn,
+                          "apmc": matched,
+                          "min_price": min_p,
+                          "max_price": max_p,
+                          "modal_price": modal_p,
+                          "date": today,
+                          "source": "kisandeals",
+                      })
+                      count += 1
+
+                  print(f"  {crop_en}: {count} APMCs scraped")
+
+              except Exception as e:
+                  print(f"  {crop_en}: ERROR {e}")
+
+          # Push to Supabase
+          if all_rows:
+              print(f"\nPushing {len(all_rows)} price rows to Supabase...")
+              headers = {
+                  "apikey": SUPABASE_KEY,
+                  "Authorization": f"Bearer {SUPABASE_KEY}",
+                  "Content-Type": "application/json",
+                  "Prefer": "resolution=merge-duplicates",
+              }
+              url = f"{SUPABASE_URL}/rest/v1/mandi_prices"
+              r = httpx.post(url, json=all_rows, headers=headers, timeout=30)
+              print(f"Supabase response: {r.status_code}")
+              if r.status_code >= 300:
+                  print(f"Error: {r.text[:500]}")
+          else:
+              print("No prices scraped — nothing to push")
+
+          PYTHON_SCRIPT
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
