@@ -472,9 +472,13 @@ async def _try_kisandeals(crop_key: str) -> dict[str, Any] | None:
     crop_kn = CROP_NAME_KN.get(crop_key, display_name)
 
     url = f"https://www.kisandeals.com/mandiprices/{slug}/KARNATAKA/ALL"
+    browser_headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml",
+    }
     try:
         async with httpx.AsyncClient(follow_redirects=True, timeout=15) as client:
-            resp = await client.get(url)
+            resp = await client.get(url, headers=browser_headers)
             resp.raise_for_status()
     except Exception as e:
         logger.warning(f"kisandeals request failed for {crop_key}: {e}")

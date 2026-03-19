@@ -78,7 +78,11 @@ jobs:
           for slug, (crop_en, crop_kn) in CROPS.items():
               url = f"https://www.kisandeals.com/mandiprices/{slug}/KARNATAKA/ALL"
               try:
-                  r = httpx.get(url, timeout=20, follow_redirects=True)
+                  headers = {
+                  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                  "Accept": "text/html,application/xhtml+xml",
+              }
+              r = httpx.get(url, headers=headers, timeout=20, follow_redirects=True)
                   if r.status_code != 200:
                       print(f"  {crop_en}: HTTP {r.status_code}")
                       continue
